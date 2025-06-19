@@ -142,7 +142,7 @@ const Trading: React.FC = () => {
       
       toast.success(`Trading started with ${selectedStrategy.replace('_', ' ').toLowerCase()}`)
     } catch (error) {
-      toast.error(`Failed to start trading: ${error.message}`)
+      toast.error(`Failed to start trading: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoading(false)
     }
@@ -155,7 +155,7 @@ const Trading: React.FC = () => {
       dispatch(pauseTrading())
       toast.success('Trading paused')
     } catch (error) {
-      toast.error(`Failed to pause trading: ${error.message}`)
+      toast.error(`Failed to pause trading: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoading(false)
     }
@@ -168,7 +168,7 @@ const Trading: React.FC = () => {
       dispatch(resumeTrading())
       toast.success('Trading resumed')
     } catch (error) {
-      toast.error(`Failed to resume trading: ${error.message}`)
+      toast.error(`Failed to resume trading: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoading(false)
     }
@@ -186,7 +186,7 @@ const Trading: React.FC = () => {
       
       toast.success('Trading stopped')
     } catch (error) {
-      toast.error(`Failed to stop trading: ${error.message}`)
+      toast.error(`Failed to stop trading: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoading(false)
     }

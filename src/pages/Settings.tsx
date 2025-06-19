@@ -99,7 +99,7 @@ const Settings: React.FC = () => {
       }
     } catch (error) {
       setRpcStatus('error')
-      toast.error(`RPC connection failed: ${error.message}`)
+      toast.error(`RPC connection failed: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsTestingRPC(false)
     }
@@ -304,9 +304,9 @@ const Settings: React.FC = () => {
                   </label>
                   <input
                     type={field.type}
-                    value={localConfig[field.key]}
+                    value={localConfig[field.key as keyof typeof localConfig]}
                     onChange={(e) => handleInputChange(field.key, e.target.value)}
-                    step={field.step}
+                    step={'step' in field ? field.step : undefined}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

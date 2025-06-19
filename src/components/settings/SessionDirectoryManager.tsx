@@ -42,7 +42,7 @@ const SessionDirectoryManager: React.FC<SessionDirectoryManagerProps> = ({
       // For now, we'll use the session files from Redux
       setSessionFiles(reduxSessionFiles)
     } catch (error) {
-      toast.error(`Failed to load session files: ${error.message}`)
+      toast.error(`Failed to load session files: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoading(false)
     }

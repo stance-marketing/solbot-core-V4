@@ -102,7 +102,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
       toast.success('Admin wallet ready! Please fund it with SOL before continuing.')
       return true
     } catch (error) {
-      setError(`Failed to create admin wallet: ${error.message}`)
+      setError(`Failed to create admin wallet: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`)
       return false
     } finally {
       setIsLoading(false)
@@ -125,7 +125,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
       toast.success(`Generated ${wallets.length} trading wallets`)
       return true
     } catch (error) {
-      setError(`Failed to generate trading wallets: ${error.message}`)
+      setError(`Failed to generate trading wallets: ${error instanceof Error ? error.message : String(error)}`)
       return false
     } finally {
       setIsLoading(false)
@@ -153,7 +153,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
       toast.success(`Successfully distributed SOL to ${updatedWallets.length} wallets`)
       return true
     } catch (error) {
-      setError(`Failed to distribute SOL to wallets: ${error.message}`)
+      setError(`Failed to distribute SOL to wallets: ${error instanceof Error ? error.message : String(error)}`)
       return false
     } finally {
       setIsLoading(false)
@@ -175,13 +175,24 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
         setTradingWalletsState(updatedWallets)
         toast.success('Tokens distributed to trading wallets')
       } else {
-        toast.info('No tokens found in admin wallet - skipping token distribution')
+        toast('No tokens found in admin wallet - skipping token distribution', { icon: 'ℹ️' })
       }
       
       return true
     } catch (error) {
-      setError(`Failed to distribute tokens: ${error.message}`)
-      return false
+      // For token distribution, we should allow proceeding even if it fails
+      // This is because the admin wallet might not have tokens or SOL for fees
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.warn('Token distribution failed (this is expected if admin wallet has no tokens or SOL):', errorMessage)
+      
+      if (errorMessage.includes('no record of a prior credit') || errorMessage.includes('insufficient funds') || errorMessage.includes('Maximum call stack size exceeded')) {
+        toast('Admin wallet has no tokens or SOL for fees - skipping token distribution', { icon: 'ℹ️' })
+        return true // Allow proceeding to next step
+      } else {
+        // Only show error for unexpected issues
+        setError(`Failed to distribute tokens: ${errorMessage}`)
+        return false
+      }
     } finally {
       setIsLoading(false)
     }
@@ -231,9 +242,27 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
       toast.success(`Trading started with ${strategy.replace('_', ' ').toLowerCase()}!`)
       handleClose()
     } catch (error) {
-      setError(`Failed to start trading: ${error.message}`)
+      setError(`Failed to start trading: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Helper function to determine if we can proceed to next step
+  const canProceedToNext = () => {
+    switch (currentStep) {
+      case 1:
+        return !!(tokenData && poolKeys)
+      case 2:
+        return !!adminWallet
+      case 3:
+        return tradingWallets.length > 0
+      case 4:
+        return true // SOL distribution can be skipped
+      case 5:
+        return true // Token distribution can be skipped
+      default:
+        return false
     }
   }
 
@@ -626,8 +655,8 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
 
             <button
               onClick={handleNext}
-              disabled={isLoading}
-              className="btn btn-primary flex items-center"
+              disabled={isLoading || !canProceedToNext()}
+              className="btn btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

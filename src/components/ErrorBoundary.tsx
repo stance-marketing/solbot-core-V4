@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react'
+import { Component, ErrorInfo, ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -92,7 +92,7 @@ class ErrorBoundary extends Component<Props, State> {
                   Error Details:
                 </h3>
                 <p className="text-sm text-red-300 font-mono break-all">
-                  {this.state.error.message}
+                  {this.state.error instanceof Error ? this.state.error.message : String(this.state.error)}
                 </p>
                 {this.state.errorInfo && (
                   <details className="mt-3">

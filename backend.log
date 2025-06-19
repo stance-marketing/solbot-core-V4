@@ -1,0 +1,534 @@
+🚀 Production server running on http://localhost:12001
+🔗 Health check: http://localhost:12001/api/health
+🌐 RPC URL: https://floral-capable-sun.solana-mainnet.quiknode.pro/569466c8ec8e71909ae64117473d0bd3327e133a/
+🌐 WebSocket URL: wss://floral-capable-sun.solana-mainnet.quiknode.pro/569466c8ec8e71909ae64117473d0bd3327e133a/
+📁 Session Directory: ./sessions
+✅ Backend integrated with real Solana functions
+✅ Real wallet generation and SOL distribution
+✅ Real Dexscreener API integration
+✅ Real session management
+✅ Token account closing and balance consolidation
+✅ Configuration management system
+✅ Ready for production use
+Pool keys not found, continuing without them
+🔄 Creating initial session file: USD Coin_06.19.2025_04.49.31am_session.json
+✅ Initial session file created successfully
+Generated Wallet 0: publicKey=Ea8Gm6NE2oUUUciPWShtMCsDWxAh1C7TzSxAgaxzfKxo, privateKey=3uxJtZbx1ms19ssh7apbWfw9rtWfxEvrBLMkZUBYi3eqZct9Dh4EETK5sukTchqN3zoex34bab57VtYrZ1hSGkHy
+🔄 Updating session file with admin wallet: USD Coin_06.19.2025_04.49.31am_session.json
+✅ Session updated with admin wallet successfully
+Generated Wallet 1: publicKey=G7cpwD4MucUgC88FRy94JtUAhkuJyxgBwWx1ym1rS51k, privateKey=2pMZ8GocpzJffmQqmj7Y22jeg3J8i5eGTA5HumdcJa42LcBenkw56GkFf8JGcWxJdG4BGaVUKJLCRvTM6pmZ1JxS
+Generated Wallet 2: publicKey=GUgytoeupWRdjSuhornd8Zei7YbcqWsHock8EMQfKU6u, privateKey=4pqECd3snp5YRu9KsRnig4h3xw7SiLXp4jSxN9KbJB2kmMYdZ5pTmac8CUDXnJuiEGgf3AatqjdPZPPFX9KsX7B7
+Generated Wallet 3: publicKey=EteUSLvF3Def2TGxNB5TS4v6K5joDu3qTW5NNfHbjHgZ, privateKey=4DZE62iEoVJyFddy2JtQ42CD5Rscb6iwUzLnm6P3DJD8nedfQqHYkC1ZVDu9VRRQ5uQrqFFA3D7h9eSuShY2AAZB
+Generated Wallet 4: publicKey=61JbnyskFhMNMdKBsTxRuifEva9PVbxprNFRgNTGbDEr, privateKey=4z1QvieZhkSz6C2KsGSEwstywsQkeLYv7k7i65VVEdkoxXtDD28HUyAviVJeNaFoeVxHkUyzg2DkPz3JVNfqRMaA
+Generated Wallet 5: publicKey=DQWT85XxKoJ84iV1sMPAM4PBf5pdVkqYwuPmxo6ETZBA, privateKey=5Akw5zK4u7TLf2rW1wp76Z31ewmf9dF8q4sNLRqfw6Gxj11UMN8anRUdhAc3SbgG2kmHzxrSVGqwLNeFwnDKXSjv
+Generated Wallet 6: publicKey=Ci8piGrZHYkh4DTJDGQTzBJ59zbUJ4yK2jobaa77fdqh, privateKey=7Qfo93oMMMiB3BvKeFhz6d8914P3eohUZ1Cv2SWGNA3JiFwLwcbotidqRUquVHRNgVFVRUJr8GJgAkFG3e5KGoq
+Generated Wallet 7: publicKey=3RoxAvyCpKvPwykhYaCBSU8A1nc16qD9UD3LoUCQJvA1, privateKey=5MkKnLWHEkScddYgaQuYicfm4m3RnhcsP2uQ4zZDd7xdnNdAPjhEqnfBFssT9jxVEBkBc3bw2H6B4CuhUv3uUsth
+Generated Wallet 8: publicKey=3hVmBNifbvpAN1MmhLGaRvDXE23rJBxKXHStJAT3CrpK, privateKey=4597RE2UUh58gM8KaKg5dxqFYud22xfXPaBErAftRdpytVputWNEp9EJiLkLKg2C4dcUR2YkjS3ycFrTRDUsvgaw
+Generated Wallet 9: publicKey=7C353JPZzvjfkG9KudWyK4WtoB2BBtwEtVFRhBbfE7ha, privateKey=2MFsKA8J6swQnHGmPNnDYWoA4e2BMfwFfLNwC1KfQgZQQ8b59kpNka2xSrW2pQwFFuJntgec2T8Di6tDbsi7CdgL
+Generated Wallet 10: publicKey=Go1RWg45Xdi6fxNuBfdvmppKnNSTntxrMUYJYejJSbHX, privateKey=4R1QQEkuK7AQWPLp4JtRhSxBSYJn138iGUf6QSGjMjdFxz6VddgVdnhx5JCaCANCgFYfX5Qc3m2hiCrhKiQij9os
+🔄 Appending 10 trading wallets to session: USD Coin_06.19.2025_04.49.31am_session.json
+✅ Trading wallets appended to session successfully
+Distributing 1.000000 SOL to 10 wallets
+Error sending SOL: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 0)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Failed to distribute SOL to wallet G7cpwD4MucUgC88FRy94JtUAhkuJyxgBwWx1ym1rS51k: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 0)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error sending SOL: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 1)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Failed to distribute SOL to wallet GUgytoeupWRdjSuhornd8Zei7YbcqWsHock8EMQfKU6u: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 1)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error sending SOL: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 2)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Failed to distribute SOL to wallet EteUSLvF3Def2TGxNB5TS4v6K5joDu3qTW5NNfHbjHgZ: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 2)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error sending SOL: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 3)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Failed to distribute SOL to wallet 61JbnyskFhMNMdKBsTxRuifEva9PVbxprNFRgNTGbDEr: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 3)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error sending SOL: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 4)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Failed to distribute SOL to wallet DQWT85XxKoJ84iV1sMPAM4PBf5pdVkqYwuPmxo6ETZBA: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 4)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error sending SOL: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 5)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Failed to distribute SOL to wallet Ci8piGrZHYkh4DTJDGQTzBJ59zbUJ4yK2jobaa77fdqh: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 5)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error sending SOL: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 6)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Failed to distribute SOL to wallet 3RoxAvyCpKvPwykhYaCBSU8A1nc16qD9UD3LoUCQJvA1: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 6)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error sending SOL: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 7)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Failed to distribute SOL to wallet 3hVmBNifbvpAN1MmhLGaRvDXE23rJBxKXHStJAT3CrpK: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 7)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error sending SOL: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 8)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Failed to distribute SOL to wallet 7C353JPZzvjfkG9KudWyK4WtoB2BBtwEtVFRhBbfE7ha: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 8)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error sending SOL: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 9)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Failed to distribute SOL to wallet Go1RWg45Xdi6fxNuBfdvmppKnNSTntxrMUYJYejJSbHX: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async sendSol (/workspace/solbot-core/server-production.cjs:123:23)
+    at async /workspace/solbot-core/server-production.cjs:140:25
+    at async Promise.all (index 9)
+    at async distributeSol (/workspace/solbot-core/server-production.cjs:152:3)
+    at async /workspace/solbot-core/server-production.cjs:962:20 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Distributing null tokens to 0 wallets
+Failed to create associated token account for wallet Ea8Gm6NE2oUUUciPWShtMCsDWxAh1C7TzSxAgaxzfKxo: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async getOrCreateAssociatedTokenAccount (/workspace/solbot-core/server-production.cjs:185:25)
+    at async distributeTokens (/workspace/solbot-core/server-production.cjs:199:45)
+    at async /workspace/solbot-core/server-production.cjs:982:5 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error in distributeTokens: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+Error distributing tokens: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async getOrCreateAssociatedTokenAccount (/workspace/solbot-core/server-production.cjs:185:25)
+    at async distributeTokens (/workspace/solbot-core/server-production.cjs:199:45)
+    at async /workspace/solbot-core/server-production.cjs:982:5 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Distributing null tokens to 0 wallets
+Failed to create associated token account for wallet Ea8Gm6NE2oUUUciPWShtMCsDWxAh1C7TzSxAgaxzfKxo: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async getOrCreateAssociatedTokenAccount (/workspace/solbot-core/server-production.cjs:185:25)
+    at async distributeTokens (/workspace/solbot-core/server-production.cjs:199:45)
+    at async /workspace/solbot-core/server-production.cjs:982:5 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error in distributeTokens: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+Error distributing tokens: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async getOrCreateAssociatedTokenAccount (/workspace/solbot-core/server-production.cjs:185:25)
+    at async distributeTokens (/workspace/solbot-core/server-production.cjs:199:45)
+    at async /workspace/solbot-core/server-production.cjs:982:5 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Distributing null tokens to 0 wallets
+Failed to create associated token account for wallet Ea8Gm6NE2oUUUciPWShtMCsDWxAh1C7TzSxAgaxzfKxo: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async getOrCreateAssociatedTokenAccount (/workspace/solbot-core/server-production.cjs:185:25)
+    at async distributeTokens (/workspace/solbot-core/server-production.cjs:199:45)
+    at async /workspace/solbot-core/server-production.cjs:982:5 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Error in distributeTokens: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+Error distributing tokens: SendTransactionError: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8206:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.sendRawTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8171:20)
+    at async Connection.sendTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:8162:12)
+    at async sendAndConfirmTransaction (/workspace/solbot-core/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+    at async getOrCreateAssociatedTokenAccount (/workspace/solbot-core/server-production.cjs:185:25)
+    at async distributeTokens (/workspace/solbot-core/server-production.cjs:199:45)
+    at async /workspace/solbot-core/server-production.cjs:982:5 {
+  signature: '',
+  transactionMessage: 'Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.',
+  transactionLogs: []
+}
+Pool keys not found, continuing without them
+🔄 Creating initial session file: USD Coin_06.19.2025_05.03.06am_session.json
+✅ Initial session file created successfully

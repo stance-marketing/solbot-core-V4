@@ -46,7 +46,7 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
       const sessionFiles = await backendService.getSessionFiles()
       setSessions(sessionFiles)
     } catch (error) {
-      toast.error(`Failed to load session files: ${error.message}`)
+      toast.error(`Failed to load session files: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoadingState(false)
     }
@@ -117,8 +117,8 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
       toast.success(`Session loaded: ${sessionData.tokenName}`)
       onSelectSession(filename)
     } catch (error) {
-      dispatch(setError(`Failed to load session: ${error.message}`))
-      toast.error(`Failed to load session: ${error.message}`)
+      dispatch(setError(`Failed to load session: ${error instanceof Error ? error.message : String(error)}`))
+      toast.error(`Failed to load session: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       dispatch(setLoading(false))
     }
@@ -135,7 +135,7 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
       setSessions(sessions.filter(s => s.filename !== filename))
       toast.success('Session deleted successfully')
     } catch (error) {
-      toast.error(`Failed to delete session: ${error.message}`)
+      toast.error(`Failed to delete session: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
@@ -160,7 +160,7 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
       
       toast.success('Environment file exported successfully')
     } catch (error) {
-      toast.error(`Failed to export session: ${error.message}`)
+      toast.error(`Failed to export session: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 

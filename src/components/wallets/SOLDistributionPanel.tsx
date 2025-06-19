@@ -56,7 +56,7 @@ const SOLDistributionPanel: React.FC<SOLDistributionPanelProps> = ({
       toast.success(`Successfully distributed ${totalAmount} SOL to ${updatedWallets.length} wallets`)
     } catch (error) {
       setDistributionProgress(null)
-      toast.error(`Failed to distribute SOL: ${error.message}`)
+      toast.error(`Failed to distribute SOL: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsDistributing(false)
     }

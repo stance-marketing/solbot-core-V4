@@ -5,13 +5,13 @@ const path = require('path');
 const { Connection, PublicKey, Keypair, Transaction, SystemProgram, sendAndConfirmTransaction, LAMPORTS_PER_SOL } = require('@solana/web3.js');
 const { createTransferCheckedInstruction, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, burnChecked, closeAccount } = require('@solana/spl-token');
 const axios = require('axios');
-const bs58 = require('bs58');
+const bs58 = require('bs58').default;
 const { format } = require('date-fns');
 const { toZonedTime } = require('date-fns-tz');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 12001;
 
 // Middleware
 app.use(cors());
@@ -661,8 +661,61 @@ app.post('/api/tokens/validate', async (req, res) => {
     
     if (tokenData && tokenData.pairs && tokenData.pairs.length > 0) {
       const pair = tokenData.pairs[0];
+      
+      // Get pool keys for the token
+      let poolKeys = null;
+      try {
+        const marketId = await getMarketIdForTokenAddress(connection, tokenAddress);
+        if (marketId) {
+          poolKeys = await getPoolKeysForTokenAddress(connection, tokenAddress);
+        }
+      } catch (error) {
+        console.log('Pool keys not found, continuing without them');
+      }
+
+      // Create initial session file immediately after token validation (like CLI)
+      const now = new Date();
+      const sessionTimestamp = now.toISOString();
+      const tokenName = pair.baseToken.name;
+      const currentSessionFileName = `${tokenName}_${formatTimestampToEST(new Date(sessionTimestamp))}_session.json`;
+      
+      console.log(`🔄 Creating initial session file: ${currentSessionFileName}`);
+      
+      const initialSessionData = {
+        admin: {
+          number: 'to be created',
+          privateKey: 'to be created'
+        },
+        wallets: [],
+        tokenAddress,
+        poolKeys,
+        tokenName,
+        timestamp: formatTimestampToEST(new Date(sessionTimestamp))
+      };
+
+      try {
+        const sessionFilePath = path.join(swapConfig.SESSION_DIR, currentSessionFileName);
+        fs.writeFileSync(sessionFilePath, JSON.stringify(initialSessionData, null, 2));
+        console.log('✅ Initial session file created successfully');
+        
+        // Store session info for subsequent API calls
+        global.currentSessionInfo = {
+          fileName: currentSessionFileName,
+          filePath: sessionFilePath,
+          tokenName,
+          tokenAddress,
+          poolKeys,
+          sessionTimestamp
+        };
+        
+      } catch (error) {
+        console.error('❌ Failed to create initial session file:', error);
+        return res.status(500).json({ error: 'Failed to create session file' });
+      }
+
       res.json({
         isValid: true,
+        sessionFileName: currentSessionFileName,
         tokenData: {
           name: pair.baseToken.name,
           symbol: pair.baseToken.symbol,
@@ -676,7 +729,8 @@ app.post('/api/tokens/validate', async (req, res) => {
               sells: pair.txns.h24.sells
             }
           }
-        }
+        },
+        poolKeys
       });
     } else {
       res.json({ isValid: false });
@@ -723,6 +777,27 @@ app.post('/api/tokens/market-id', async (req, res) => {
 app.post('/api/wallets/admin', async (req, res) => {
   try {
     const adminWallet = new WalletWithNumber();
+    
+    // Update session file with admin wallet (like CLI)
+    if (global.currentSessionInfo) {
+      console.log(`🔄 Updating session file with admin wallet: ${global.currentSessionInfo.fileName}`);
+      
+      try {
+        const sessionData = JSON.parse(fs.readFileSync(global.currentSessionInfo.filePath, 'utf-8'));
+        sessionData.admin = {
+          number: adminWallet.number,
+          address: adminWallet.publicKey,
+          privateKey: adminWallet.privateKey
+        };
+        
+        fs.writeFileSync(global.currentSessionInfo.filePath, JSON.stringify(sessionData, null, 2));
+        console.log('✅ Session updated with admin wallet successfully');
+      } catch (error) {
+        console.error('❌ Failed to update session with admin wallet:', error);
+        return res.status(500).json({ error: 'Failed to update session file' });
+      }
+    }
+    
     res.json({
       number: adminWallet.number,
       publicKey: adminWallet.publicKey,
@@ -746,6 +821,27 @@ app.post('/api/wallets/admin/import', async (req, res) => {
     }
     
     const adminWallet = WalletWithNumber.fromPrivateKey(privateKey, 0);
+    
+    // Update session file with imported admin wallet (like CLI)
+    if (global.currentSessionInfo) {
+      console.log(`🔄 Updating session file with imported admin wallet: ${global.currentSessionInfo.fileName}`);
+      
+      try {
+        const sessionData = JSON.parse(fs.readFileSync(global.currentSessionInfo.filePath, 'utf-8'));
+        sessionData.admin = {
+          number: adminWallet.number,
+          address: adminWallet.publicKey,
+          privateKey: adminWallet.privateKey
+        };
+        
+        fs.writeFileSync(global.currentSessionInfo.filePath, JSON.stringify(sessionData, null, 2));
+        console.log('✅ Session updated with imported admin wallet successfully');
+      } catch (error) {
+        console.error('❌ Failed to update session with imported admin wallet:', error);
+        return res.status(500).json({ error: 'Failed to update session file' });
+      }
+    }
+    
     res.json({
       number: 0,
       publicKey: adminWallet.publicKey,
@@ -780,6 +876,31 @@ app.post('/api/wallets/trading', async (req, res) => {
         generationTimestamp: wallet.generationTimestamp
       };
     });
+    
+    // Append wallets to session file (like CLI)
+    if (global.currentSessionInfo) {
+      console.log(`🔄 Appending ${count} trading wallets to session: ${global.currentSessionInfo.fileName}`);
+      
+      try {
+        const sessionData = JSON.parse(fs.readFileSync(global.currentSessionInfo.filePath, 'utf-8'));
+        
+        const newWalletData = wallets.map(wallet => ({
+          number: wallet.number,
+          address: wallet.publicKey,
+          privateKey: wallet.privateKey,
+          generationTimestamp: wallet.generationTimestamp
+        }));
+        
+        sessionData.wallets.push(...newWalletData);
+        
+        fs.writeFileSync(global.currentSessionInfo.filePath, JSON.stringify(sessionData, null, 2));
+        console.log('✅ Trading wallets appended to session successfully');
+      } catch (error) {
+        console.error('❌ Failed to append trading wallets to session:', error);
+        return res.status(500).json({ error: 'Failed to update session file' });
+      }
+    }
+    
     res.json(wallets);
   } catch (error) {
     console.error('Error generating trading wallets:', error);

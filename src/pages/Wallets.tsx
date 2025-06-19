@@ -79,7 +79,7 @@ const Wallets: React.FC = () => {
 
       toast.success('Wallet balances refreshed')
     } catch (error) {
-      toast.error(`Failed to refresh balances: ${error.message}`)
+      toast.error(`Failed to refresh balances: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsRefreshing(false)
     }

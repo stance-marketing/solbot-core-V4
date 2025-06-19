@@ -32,7 +32,7 @@ const AdminWalletPanel: React.FC<AdminWalletPanelProps> = ({
       toast.success('Admin wallet created successfully!')
       setMode(null)
     } catch (error) {
-      toast.error(`Failed to create admin wallet: ${error.message}`)
+      toast.error(`Failed to create admin wallet: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsCreating(false)
     }
@@ -52,7 +52,7 @@ const AdminWalletPanel: React.FC<AdminWalletPanelProps> = ({
       setImportPrivateKey('')
       setMode(null)
     } catch (error) {
-      toast.error(`Failed to import admin wallet: ${error.message}`)
+      toast.error(`Failed to import admin wallet: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsImporting(false)
     }

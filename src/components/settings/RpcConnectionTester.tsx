@@ -58,7 +58,7 @@ const RpcConnectionTester: React.FC<RpcConnectionTesterProps> = ({
       }
     } catch (error) {
       setRpcStatus('error')
-      toast.error(`RPC connection failed: ${error.message}`)
+      toast.error(`RPC connection failed: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsTestingRPC(false)
     }

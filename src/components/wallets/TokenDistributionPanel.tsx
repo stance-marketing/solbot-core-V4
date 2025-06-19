@@ -87,7 +87,7 @@ const TokenDistributionPanel: React.FC<TokenDistributionPanelProps> = ({
       // Refresh admin balance
       await checkAdminTokenBalance()
     } catch (error) {
-      toast.error(`Failed to distribute tokens: ${error.message}`)
+      toast.error(`Failed to distribute tokens: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsDistributing(false)
     }
