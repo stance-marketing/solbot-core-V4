@@ -28,7 +28,7 @@ const initialState: WebSocketState = {
   reconnectAttempts: 0,
   maxReconnectAttempts: 5,
   reconnectInterval: 3000,
-  url: 'wss://shy-yolo-theorem.solana-mainnet.quiknode.pro/1796bb57c2fdd2a536ae9f46f2d0fd57a9f27bc3/', // Updated WebSocket URL
+  url: 'wss://shy-yolo-theorem.solana-mainnet.quiknode.pro/1796bb57c2fdd2a536ae9f46f2d0fd57a9f27bc3/', // Your WebSocket URL
 }
 
 const websocketSlice = createSlice({
