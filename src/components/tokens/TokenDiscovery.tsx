@@ -51,34 +51,36 @@ const TokenDiscovery: React.FC<TokenDiscoveryProps> = ({
     setTokenData(null)
 
     try {
-      console.log('Validating token with backend:', tokenAddress)
+      console.log('🔍 Validating token with backend:', tokenAddress)
       
       // Step 1: Validate token and get data from backend
       const validationResult = await backendService.validateTokenAddress(tokenAddress)
+      console.log('✅ Token validation result:', validationResult)
       
       if (!validationResult.isValid || !validationResult.tokenData) {
         throw new Error('Token not found or not tradeable. Please check the address.')
       }
 
-      console.log('Token validated successfully:', validationResult.tokenData)
+      console.log('✅ Token data received:', validationResult.tokenData)
       setTokenData(validationResult.tokenData)
 
       // Step 2: Get pool information from backend
-      console.log('Getting pool information...')
+      console.log('🔍 Getting pool information...')
       const poolKeys = await backendService.getPoolKeys(tokenAddress)
+      console.log('✅ Pool keys received:', poolKeys)
       
       if (!poolKeys) {
         throw new Error('This token is not available for trading on Raydium')
       }
 
-      console.log('Pool information confirmed')
+      console.log('✅ Pool information confirmed')
 
       // Success - call the callback with validated data
       onTokenValidated(validationResult.tokenData, poolKeys)
       toast.success(`${validationResult.tokenData.name} is ready for trading!`)
 
     } catch (error) {
-      console.error('Token validation error:', error)
+      console.error('❌ Token validation error:', error)
       const errorMessage = error.message || 'Failed to validate token'
       setError(errorMessage)
       toast.error(errorMessage)
@@ -154,7 +156,7 @@ const TokenDiscovery: React.FC<TokenDiscoveryProps> = ({
             <div className="text-center">
               <div className="text-green-600 dark:text-green-400 font-medium">24h Change</div>
               <div className={`${
-                tokenData.priceChange?.h24?.startsWith('+') 
+                tokenData.priceChange?.h24?.toString().startsWith('+') 
                   ? 'text-green-600 dark:text-green-400' 
                   : 'text-red-600 dark:text-red-400'
               }`}>
