@@ -1020,6 +1020,55 @@ app.post('/api/sessions/export-env', async (req, res) => {
   }
 });
 
+// Configuration Management
+app.get('/api/config/swap', (req, res) => {
+  res.json(swapConfig);
+});
+
+app.post('/api/config/swap', (req, res) => {
+  try {
+    const { config } = req.body;
+    
+    // Update the swapConfig object with the new values
+    Object.assign(swapConfig, config);
+    
+    // Save the updated config to a file
+    const configFilePath = path.join(__dirname, 'swapConfig.json');
+    fs.writeFileSync(configFilePath, JSON.stringify(swapConfig, null, 2));
+    
+    res.json({ success: true, message: 'Configuration updated successfully' });
+  } catch (error) {
+    console.error('Error updating configuration:', error);
+    res.status(500).json({ error: 'Failed to update configuration' });
+  }
+});
+
+app.post('/api/config/test-rpc', async (req, res) => {
+  try {
+    const { rpcUrl } = req.body;
+    
+    if (!rpcUrl) {
+      return res.status(400).json({ error: 'RPC URL is required' });
+    }
+    
+    // Test the RPC connection
+    const testConnection = new Connection(rpcUrl, 'confirmed');
+    const version = await testConnection.getVersion();
+    
+    res.json({ 
+      success: true, 
+      message: 'RPC connection successful', 
+      version 
+    });
+  } catch (error) {
+    console.error('Error testing RPC connection:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: `Failed to connect to RPC: ${error.message}` 
+    });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -1037,7 +1086,8 @@ app.get('/api/health', (req, res) => {
       tokenDistribution: true,
       tradingControls: true,
       realSolanaFunctions: true,
-      tokenAccountCleaner: true
+      tokenAccountCleaner: true,
+      configurationManager: true
     }
   });
 });
@@ -1060,6 +1110,7 @@ app.listen(PORT, () => {
   console.log('✅ Real Dexscreener API integration');
   console.log('✅ Real session management');
   console.log('✅ Token account closing and balance consolidation');
+  console.log('✅ Configuration management system');
   console.log('✅ Ready for production use');
 });
 

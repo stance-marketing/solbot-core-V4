@@ -444,6 +444,62 @@ class BackendService {
     }
   }
 
+  // Configuration Management
+  async saveSwapConfig(config: any): Promise<void> {
+    try {
+      console.log('💾 Saving swap configuration...')
+      const response = await fetch(`${this.baseUrl}/config/swap`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config })
+      })
+      await this.handleResponse(response)
+      console.log('✅ Swap configuration saved')
+    } catch (error) {
+      console.error('❌ Failed to save swap configuration:', error)
+      throw new Error(`Failed to save swap configuration: ${error.message}`)
+    }
+  }
+
+  async getSwapConfig(): Promise<any> {
+    try {
+      console.log('🔍 Getting swap configuration...')
+      const response = await fetch(`${this.baseUrl}/config/swap`)
+      await this.handleResponse(response)
+      const config = await response.json()
+      console.log('✅ Swap configuration retrieved')
+      return config
+    } catch (error) {
+      console.error('❌ Failed to get swap configuration:', error)
+      throw new Error(`Failed to get swap configuration: ${error.message}`)
+    }
+  }
+
+  async testRpcConnection(rpcUrl: string): Promise<{ success: boolean, latency: number }> {
+    try {
+      console.log('🔍 Testing RPC connection:', rpcUrl)
+      const startTime = Date.now()
+      const response = await fetch(`${this.baseUrl}/config/test-rpc`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rpcUrl })
+      })
+      const latency = Date.now() - startTime
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ RPC connection test successful:', result)
+        return { success: result.success, latency }
+      } else {
+        console.error('❌ RPC connection test failed')
+        return { success: false, latency }
+      }
+    } catch (error) {
+      console.error('❌ RPC connection test failed:', error)
+      return { success: false, latency: 0 }
+    }
+  }
+
   // Health check
   async checkHealth(): Promise<{ status: string; timestamp: string; tradingActive: boolean }> {
     try {
