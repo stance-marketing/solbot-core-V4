@@ -10,11 +10,14 @@ import {
   Trash2, 
   Play,
   Search,
-  Filter
+  Filter,
+  Eye
 } from 'lucide-react'
 import { backendService, SessionFile } from '../../services/backendService'
 import { setCurrentSession, setLoading, setError } from '../../store/slices/sessionSlice'
 import { setAdminWallet, setTradingWallets } from '../../store/slices/walletSlice'
+import { SessionData } from '../../store/slices/sessionSlice'
+import SessionViewer from './SessionViewer'
 import toast from 'react-hot-toast'
 
 interface SessionBrowserProps {
@@ -30,6 +33,7 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [selectedSession, setSelectedSession] = useState<string | null>(null)
+  const [viewingSession, setViewingSession] = useState<SessionData | null>(null)
 
   useEffect(() => {
     loadSessions()
@@ -136,6 +140,16 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
       toast.success('Session deleted successfully')
     } catch (error) {
       toast.error(`Failed to delete session: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  const handleViewSession = async (filename: string) => {
+    try {
+      const sessionData = await backendService.loadSession(filename)
+      setViewingSession(sessionData)
+      setSelectedSession(null)
+    } catch (error) {
+      toast.error(`Failed to load session: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
@@ -296,6 +310,15 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
                       <div className="absolute right-0 top-8 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10 min-w-[160px]">
                         <button
                           onClick={() => {
+                            handleViewSession(session.filename)
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center space-x-2"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>View Session</span>
+                        </button>
+                        <button
+                          onClick={() => {
                             handleLoadSession(session.filename)
                             setSelectedSession(null)
                           }}
@@ -379,6 +402,14 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Session Viewer Modal */}
+      {viewingSession && (
+        <SessionViewer
+          sessionData={viewingSession}
+          onClose={() => setViewingSession(null)}
+        />
       )}
     </div>
   )

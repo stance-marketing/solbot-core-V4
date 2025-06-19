@@ -532,3 +532,5 @@ Catch the `SendTransactionError` and call `getLogs()` on it for full details.
 Pool keys not found, continuing without them
 🔄 Creating initial session file: USD Coin_06.19.2025_05.03.06am_session.json
 ✅ Initial session file created successfully
+Loading session from ./sessions
+Session loaded successfully

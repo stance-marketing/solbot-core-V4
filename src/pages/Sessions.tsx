@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
 import { useSelector } from 'react-redux'
-import { Plus, FolderOpen, RotateCcw } from 'lucide-react'
+import { Plus, FolderOpen, RotateCcw, Eye } from 'lucide-react'
 import { RootState } from '../store/store'
 import SessionBrowser from '../components/sessions/SessionBrowser'
 import RestartPointSelector from '../components/sessions/RestartPointSelector'
 import MainSessionFlow from '../components/sessions/MainSessionFlow'
+import SessionViewer from '../components/sessions/SessionViewer'
 
 const Sessions: React.FC = () => {
   const { currentSession } = useSelector((state: RootState) => state.session)
   const [showMainFlow, setShowMainFlow] = useState(false)
   const [showRestartSelector, setShowRestartSelector] = useState(false)
+  const [showSessionViewer, setShowSessionViewer] = useState(false)
   const [selectedSessionFile, setSelectedSessionFile] = useState<string | null>(null)
 
   const handleSelectSession = (filename: string) => {
@@ -32,6 +34,10 @@ const Sessions: React.FC = () => {
     setShowMainFlow(false)
   }
 
+  const handleViewSession = () => {
+    setShowSessionViewer(true)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -47,13 +53,22 @@ const Sessions: React.FC = () => {
         
         <div className="flex items-center space-x-3">
           {currentSession && (
-            <button
-              onClick={handleRestartSession}
-              className="flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Restart Session
-            </button>
+            <>
+              <button
+                onClick={handleViewSession}
+                className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                View Session
+              </button>
+              <button
+                onClick={handleRestartSession}
+                className="flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Restart Session
+              </button>
+            </>
           )}
           
           <button
@@ -139,6 +154,14 @@ const Sessions: React.FC = () => {
           isOpen={showRestartSelector}
           onClose={() => setShowRestartSelector(false)}
           sessionFilename={selectedSessionFile || `${currentSession.tokenName}_${currentSession.timestamp}_session.json`}
+        />
+      )}
+
+      {/* Session Viewer Modal */}
+      {currentSession && showSessionViewer && (
+        <SessionViewer
+          sessionData={currentSession}
+          onClose={() => setShowSessionViewer(false)}
         />
       )}
     </div>
