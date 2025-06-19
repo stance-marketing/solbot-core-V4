@@ -1,77 +1,140 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
-import { Wifi, WifiOff, Loader2 } from 'lucide-react'
+import { Wifi, WifiOff, Loader2, RefreshCw } from 'lucide-react'
 import { RootState } from '../store/store'
+import { backendService } from '../services/backendService'
+import toast from 'react-hot-toast'
 
 const ConnectionStatus: React.FC = () => {
   const { status, reconnectAttempts, maxReconnectAttempts } = useSelector(
     (state: RootState) => state.websocket
   )
+  const [backendStatus, setBackendStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
+  const [isCheckingBackend, setIsCheckingBackend] = useState(false)
 
-  const getStatusConfig = () => {
-    switch (status) {
-      case 'connected':
-        return {
-          icon: Wifi,
-          text: 'Connected',
-          color: 'text-secondary',
-          bgColor: 'bg-secondary/10',
-          borderColor: 'border-secondary/20',
-        }
-      case 'connecting':
-        return {
-          icon: Loader2,
-          text: 'Connecting...',
-          color: 'text-yellow-500',
-          bgColor: 'bg-yellow-500/10',
-          borderColor: 'border-yellow-500/20',
-        }
-      case 'disconnected':
-        return {
-          icon: WifiOff,
-          text: 'Disconnected',
-          color: 'text-red-500',
-          bgColor: 'bg-red-500/10',
-          borderColor: 'border-red-500/20',
-        }
-      case 'error':
-        return {
-          icon: WifiOff,
-          text: 'Connection Error',
-          color: 'text-red-500',
-          bgColor: 'bg-red-500/10',
-          borderColor: 'border-red-500/20',
-        }
-      default:
-        return {
-          icon: WifiOff,
-          text: 'Unknown',
-          color: 'text-muted-foreground',
-          bgColor: 'bg-muted',
-          borderColor: 'border-border',
-        }
+  // Check backend connection on mount and periodically
+  useEffect(() => {
+    checkBackendConnection()
+    
+    // Check every 30 seconds
+    const interval = setInterval(checkBackendConnection, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const checkBackendConnection = async () => {
+    if (isCheckingBackend) return
+    
+    setIsCheckingBackend(true)
+    setBackendStatus('checking')
+    
+    try {
+      const isConnected = await backendService.testConnection()
+      setBackendStatus(isConnected ? 'connected' : 'disconnected')
+      
+      if (!isConnected) {
+        console.warn('Backend connection failed')
+      }
+    } catch (error) {
+      console.error('Error checking backend connection:', error)
+      setBackendStatus('disconnected')
+    } finally {
+      setIsCheckingBackend(false)
     }
   }
 
+  const handleRetryConnection = async () => {
+    toast.loading('Reconnecting to backend...', { id: 'reconnect' })
+    await checkBackendConnection()
+    
+    if (backendStatus === 'connected') {
+      toast.success('Backend connection restored!', { id: 'reconnect' })
+    } else {
+      toast.error('Failed to connect to backend. Is the server running?', { id: 'reconnect' })
+    }
+  }
+
+  const getStatusConfig = () => {
+    // WebSocket status
+    const wsConfig = {
+      icon: status === 'connecting' ? Loader2 : 
+            status === 'connected' ? Wifi : WifiOff,
+      text: status === 'connecting' ? 'Connecting...' : 
+            status === 'connected' ? 'Connected' : 
+            status === 'error' ? 'Connection Error' : 'Disconnected',
+      color: status === 'connected' ? 'text-secondary' : 
+             status === 'connecting' ? 'text-yellow-500' : 'text-red-500',
+      bgColor: status === 'connected' ? 'bg-secondary/10' : 
+               status === 'connecting' ? 'bg-yellow-500/10' : 'bg-red-500/10',
+      borderColor: status === 'connected' ? 'border-secondary/20' : 
+                  status === 'connecting' ? 'border-yellow-500/20' : 'border-red-500/20',
+    }
+
+    // Backend status
+    const beConfig = {
+      icon: backendStatus === 'checking' ? Loader2 : 
+            backendStatus === 'connected' ? Wifi : WifiOff,
+      text: backendStatus === 'checking' ? 'Checking...' : 
+            backendStatus === 'connected' ? 'Backend Connected' : 'Backend Offline',
+      color: backendStatus === 'connected' ? 'text-secondary' : 
+             backendStatus === 'checking' ? 'text-yellow-500' : 'text-red-500',
+      bgColor: backendStatus === 'connected' ? 'bg-secondary/10' : 
+               backendStatus === 'checking' ? 'bg-yellow-500/10' : 'bg-red-500/10',
+      borderColor: backendStatus === 'connected' ? 'border-secondary/20' : 
+                  backendStatus === 'checking' ? 'border-yellow-500/20' : 'border-red-500/20',
+    }
+
+    return { ws: wsConfig, be: beConfig }
+  }
+
   const config = getStatusConfig()
-  const Icon = config.icon
+  const WsIcon = config.ws.icon
+  const BeIcon = config.be.icon
 
   return (
-    <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg border ${config.bgColor} ${config.borderColor}`}>
-      <Icon 
-        className={`w-4 h-4 ${config.color} ${
-          status === 'connecting' ? 'animate-spin' : 
-          status === 'connected' ? 'connection-pulse connected' : ''
-        }`} 
-      />
-      <div className="flex-1 min-w-0">
-        <div className={`text-sm font-medium ${config.color}`}>
-          {config.text}
-        </div>
-        {reconnectAttempts > 0 && status !== 'connected' && (
-          <div className="text-xs text-muted-foreground">
-            Attempt {reconnectAttempts}/{maxReconnectAttempts}
+    <div className="space-y-2">
+      {/* WebSocket Status */}
+      <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg border ${config.ws.bgColor} ${config.ws.borderColor}`}>
+        <WsIcon 
+          className={`w-4 h-4 ${config.ws.color} ${
+            status === 'connecting' ? 'animate-spin' : 
+            status === 'connected' ? 'connection-pulse connected' : ''
+          }`} 
+        />
+        <div className="flex-1 min-w-0">
+          <div className={`text-sm font-medium ${config.ws.color}`}>
+            {config.ws.text}
           </div>
+          {reconnectAttempts > 0 && status !== 'connected' && (
+            <div className="text-xs text-muted-foreground">
+              Attempt {reconnectAttempts}/{maxReconnectAttempts}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Backend Status */}
+      <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${config.be.bgColor} ${config.be.borderColor}`}>
+        <div className="flex items-center space-x-2">
+          <BeIcon 
+            className={`w-4 h-4 ${config.be.color} ${
+              backendStatus === 'checking' ? 'animate-spin' : 
+              backendStatus === 'connected' ? 'connection-pulse connected' : ''
+            }`} 
+          />
+          <div className={`text-sm font-medium ${config.be.color}`}>
+            {config.be.text}
+          </div>
+        </div>
+        
+        {backendStatus === 'disconnected' && (
+          <button 
+            onClick={handleRetryConnection}
+            disabled={isCheckingBackend}
+            className="text-xs flex items-center space-x-1 text-primary hover:text-primary/80"
+          >
+            <RefreshCw className={`w-3 h-3 ${isCheckingBackend ? 'animate-spin' : ''}`} />
+            <span>Retry</span>
+          </button>
         )}
       </div>
     </div>

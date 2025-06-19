@@ -8,6 +8,15 @@ import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 
+// Polyfill for AbortSignal.timeout if not available
+if (!AbortSignal.timeout) {
+  AbortSignal.timeout = (ms: number) => {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new DOMException("TimeoutError", "Timeout")), ms);
+    return controller.signal;
+  };
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>

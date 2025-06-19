@@ -35,480 +35,523 @@ class BackendService {
 
   private async handleResponse(response: Response) {
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch (e) {
+        // If parsing fails, use the default error message
+      }
+      throw new Error(errorMessage);
     }
-    return response
+    return response;
   }
 
   // Test backend connection
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`)
-      return response.ok
+      const response = await fetch(`${this.baseUrl}/health`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        // Add timeout to prevent hanging requests
+        signal: AbortSignal.timeout(5000)
+      });
+      return response.ok;
     } catch (error) {
-      console.error('Backend connection test failed:', error)
-      return false
+      console.error('Backend connection test failed:', error);
+      return false;
     }
   }
 
   // Session Management - Maps directly to your utility functions
   async getSessionFiles(): Promise<SessionFile[]> {
     try {
-      console.log('🔍 Fetching session files from backend...')
-      const response = await fetch(`${this.baseUrl}/sessions`)
-      await this.handleResponse(response)
-      const files = await response.json()
-      console.log('✅ Session files received:', files.length, 'files')
+      console.log('🔍 Fetching session files from backend...');
+      const response = await fetch(`${this.baseUrl}/sessions`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      const files = await response.json();
+      console.log('✅ Session files received:', files.length, 'files');
       
       // Convert lastModified strings to Date objects
       return files.map((file: any) => ({
         ...file,
         lastModified: new Date(file.lastModified)
-      }))
+      }));
     } catch (error) {
-      console.error('❌ Failed to fetch session files:', error)
-      throw new Error(`Failed to fetch session files: ${error.message}`)
+      console.error('❌ Failed to fetch session files:', error);
+      throw new Error(`Failed to fetch session files: ${error.message}`);
     }
   }
 
   async loadSession(filename: string): Promise<SessionData> {
     try {
-      console.log('🔍 Loading session from backend:', filename)
-      const response = await fetch(`${this.baseUrl}/sessions/${encodeURIComponent(filename)}`)
-      await this.handleResponse(response)
-      const sessionData = await response.json()
-      console.log('✅ Session loaded successfully')
-      return sessionData
+      console.log('🔍 Loading session from backend:', filename);
+      const response = await fetch(`${this.baseUrl}/sessions/${encodeURIComponent(filename)}`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      const sessionData = await response.json();
+      console.log('✅ Session loaded successfully');
+      return sessionData;
     } catch (error) {
-      console.error('❌ Failed to load session:', error)
-      throw new Error(`Failed to load session: ${error.message}`)
+      console.error('❌ Failed to load session:', error);
+      throw new Error(`Failed to load session: ${error.message}`);
     }
   }
 
   // Maps to your saveSession function in utility.ts
   async saveSession(sessionData: SessionData): Promise<string> {
     try {
-      console.log('💾 Saving session to backend...')
+      console.log('💾 Saving session to backend...');
       const response = await fetch(`${this.baseUrl}/sessions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sessionData)
-      })
-      await this.handleResponse(response)
-      const result = await response.json()
-      console.log('✅ Session saved successfully:', result.filename)
-      return result.filename
+        body: JSON.stringify(sessionData),
+        signal: AbortSignal.timeout(15000)
+      });
+      await this.handleResponse(response);
+      const result = await response.json();
+      console.log('✅ Session saved successfully:', result.filename);
+      return result.filename;
     } catch (error) {
-      console.error('❌ Failed to save session:', error)
-      throw new Error(`Failed to save session: ${error.message}`)
+      console.error('❌ Failed to save session:', error);
+      throw new Error(`Failed to save session: ${error.message}`);
     }
   }
 
   // Maps to your appendWalletsToSession function in utility.ts
   async appendWalletsToSession(wallets: WalletData[], sessionFileName: string): Promise<void> {
     try {
-      console.log('📝 Appending wallets to session...')
+      console.log('📝 Appending wallets to session...');
       const response = await fetch(`${this.baseUrl}/sessions/append-wallets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallets, sessionFileName })
-      })
-      await this.handleResponse(response)
-      console.log('✅ Wallets appended successfully')
+        body: JSON.stringify({ wallets, sessionFileName }),
+        signal: AbortSignal.timeout(15000)
+      });
+      await this.handleResponse(response);
+      console.log('✅ Wallets appended successfully');
     } catch (error) {
-      console.error('❌ Failed to append wallets to session:', error)
-      throw new Error(`Failed to append wallets to session: ${error.message}`)
+      console.error('❌ Failed to append wallets to session:', error);
+      throw new Error(`Failed to append wallets to session: ${error.message}`);
     }
   }
 
   async deleteSession(filename: string): Promise<void> {
     try {
-      console.log('🗑️ Deleting session:', filename)
+      console.log('🗑️ Deleting session:', filename);
       const response = await fetch(`${this.baseUrl}/sessions/${encodeURIComponent(filename)}`, {
-        method: 'DELETE'
-      })
-      await this.handleResponse(response)
-      console.log('✅ Session deleted successfully')
+        method: 'DELETE',
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      console.log('✅ Session deleted successfully');
     } catch (error) {
-      console.error('❌ Failed to delete session:', error)
-      throw new Error(`Failed to delete session: ${error.message}`)
+      console.error('❌ Failed to delete session:', error);
+      throw new Error(`Failed to delete session: ${error.message}`);
     }
   }
 
   // Token Management - Maps to your DexScreener integration and pool-keys functions
   async validateTokenAddress(address: string): Promise<TokenValidationResult> {
     try {
-      console.log('🔍 Validating token address with backend:', address)
+      console.log('🔍 Validating token address with backend:', address);
       
       // First test if backend is reachable
-      const isConnected = await this.testConnection()
+      const isConnected = await this.testConnection();
       if (!isConnected) {
-        throw new Error('Backend server is not running. Please start the backend with: npm run start-backend')
+        throw new Error('Backend server is not running. Please start the backend with: npm run start-backend');
       }
 
       const response = await fetch(`${this.baseUrl}/tokens/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tokenAddress: address })
-      })
+        body: JSON.stringify({ tokenAddress: address }),
+        signal: AbortSignal.timeout(15000)
+      });
       
-      await this.handleResponse(response)
-      const result = await response.json()
-      console.log('✅ Token validation result:', result)
-      return result
+      await this.handleResponse(response);
+      const result = await response.json();
+      console.log('✅ Token validation result:', result);
+      return result;
     } catch (error) {
-      console.error('❌ Failed to validate token:', error)
-      throw new Error(`Failed to validate token: ${error.message}`)
+      console.error('❌ Failed to validate token:', error);
+      throw new Error(`Failed to validate token: ${error.message}`);
     }
   }
 
   // Maps to your getPoolKeysForTokenAddress function in pool-keys.ts
   async getPoolKeys(tokenAddress: string): Promise<any> {
     try {
-      console.log('🔍 Getting pool keys from backend:', tokenAddress)
+      console.log('🔍 Getting pool keys from backend:', tokenAddress);
       const response = await fetch(`${this.baseUrl}/tokens/pool-keys`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tokenAddress })
-      })
-      await this.handleResponse(response)
-      const poolKeys = await response.json()
-      console.log('✅ Pool keys received:', poolKeys)
-      return poolKeys
+        body: JSON.stringify({ tokenAddress }),
+        signal: AbortSignal.timeout(15000)
+      });
+      await this.handleResponse(response);
+      const poolKeys = await response.json();
+      console.log('✅ Pool keys received:', poolKeys);
+      return poolKeys;
     } catch (error) {
-      console.error('❌ Failed to get pool keys:', error)
-      throw new Error(`Failed to get pool keys: ${error.message}`)
+      console.error('❌ Failed to get pool keys:', error);
+      throw new Error(`Failed to get pool keys: ${error.message}`);
     }
   }
 
   // Maps to your getMarketIdForTokenAddress function in pool-keys.ts
   async getMarketId(tokenAddress: string): Promise<string> {
     try {
-      console.log('🔍 Getting market ID from backend:', tokenAddress)
+      console.log('🔍 Getting market ID from backend:', tokenAddress);
       const response = await fetch(`${this.baseUrl}/tokens/market-id`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tokenAddress })
-      })
-      await this.handleResponse(response)
-      const result = await response.json()
-      console.log('✅ Market ID received:', result.marketId)
-      return result.marketId
+        body: JSON.stringify({ tokenAddress }),
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      const result = await response.json();
+      console.log('✅ Market ID received:', result.marketId);
+      return result.marketId;
     } catch (error) {
-      console.error('❌ Failed to get market ID:', error)
-      throw new Error(`Failed to get market ID: ${error.message}`)
+      console.error('❌ Failed to get market ID:', error);
+      throw new Error(`Failed to get market ID: ${error.message}`);
     }
   }
 
   // Wallet Management - Maps to your WalletWithNumber class
   async createAdminWallet(): Promise<WalletData> {
     try {
-      console.log('👤 Creating admin wallet...')
+      console.log('👤 Creating admin wallet...');
       const response = await fetch(`${this.baseUrl}/wallets/admin`, {
-        method: 'POST'
-      })
-      await this.handleResponse(response)
-      const wallet = await response.json()
-      console.log('✅ Admin wallet created:', wallet.publicKey)
-      return wallet
+        method: 'POST',
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      const wallet = await response.json();
+      console.log('✅ Admin wallet created:', wallet.publicKey);
+      return wallet;
     } catch (error) {
-      console.error('❌ Failed to create admin wallet:', error)
-      throw new Error(`Failed to create admin wallet: ${error.message}`)
+      console.error('❌ Failed to create admin wallet:', error);
+      throw new Error(`Failed to create admin wallet: ${error.message}`);
     }
   }
 
   // Maps to your createWalletWithNumber function in utility.ts
   async importAdminWallet(privateKey: string): Promise<WalletData> {
     try {
-      console.log('📥 Importing admin wallet...')
+      console.log('📥 Importing admin wallet...');
       const response = await fetch(`${this.baseUrl}/wallets/admin/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ privateKey })
-      })
-      await this.handleResponse(response)
-      const wallet = await response.json()
-      console.log('✅ Admin wallet imported:', wallet.publicKey)
-      return wallet
+        body: JSON.stringify({ privateKey }),
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      const wallet = await response.json();
+      console.log('✅ Admin wallet imported:', wallet.publicKey);
+      return wallet;
     } catch (error) {
-      console.error('❌ Failed to import admin wallet:', error)
-      throw new Error(`Failed to import admin wallet: ${error.message}`)
+      console.error('❌ Failed to import admin wallet:', error);
+      throw new Error(`Failed to import admin wallet: ${error.message}`);
     }
   }
 
   // Maps to your Array.from({ length: numWallets }, () => new WalletWithNumber())
   async generateTradingWallets(count: number): Promise<WalletData[]> {
     try {
-      console.log('🏭 Generating trading wallets:', count)
+      console.log('🏭 Generating trading wallets:', count);
       const response = await fetch(`${this.baseUrl}/wallets/trading`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count })
-      })
-      await this.handleResponse(response)
-      const wallets = await response.json()
-      console.log('✅ Trading wallets generated:', wallets.length)
-      return wallets
+        body: JSON.stringify({ count }),
+        signal: AbortSignal.timeout(15000)
+      });
+      await this.handleResponse(response);
+      const wallets = await response.json();
+      console.log('✅ Trading wallets generated:', wallets.length);
+      return wallets;
     } catch (error) {
-      console.error('❌ Failed to generate trading wallets:', error)
-      throw new Error(`Failed to generate trading wallets: ${error.message}`)
+      console.error('❌ Failed to generate trading wallets:', error);
+      throw new Error(`Failed to generate trading wallets: ${error.message}`);
     }
   }
 
   // Maps to your getSolBalance and getTokenBalance functions
   async getWalletBalances(wallets: WalletData[]): Promise<WalletData[]> {
     try {
-      console.log('💰 Getting wallet balances...')
+      console.log('💰 Getting wallet balances...');
       const response = await fetch(`${this.baseUrl}/wallets/balances`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallets })
-      })
-      await this.handleResponse(response)
-      const updatedWallets = await response.json()
-      console.log('✅ Wallet balances updated')
-      return updatedWallets
+        body: JSON.stringify({ wallets }),
+        signal: AbortSignal.timeout(15000)
+      });
+      await this.handleResponse(response);
+      const updatedWallets = await response.json();
+      console.log('✅ Wallet balances updated');
+      return updatedWallets;
     } catch (error) {
-      console.error('❌ Failed to get wallet balances:', error)
-      throw new Error(`Failed to get wallet balances: ${error.message}`)
+      console.error('❌ Failed to get wallet balances:', error);
+      throw new Error(`Failed to get wallet balances: ${error.message}`);
     }
   }
 
   // Maps to your getTokenBalance function for admin wallet
   async getAdminTokenBalance(adminWallet: WalletData, tokenAddress: string): Promise<number> {
     try {
-      console.log('💰 Getting admin token balance...')
+      console.log('💰 Getting admin token balance...');
       const response = await fetch(`${this.baseUrl}/wallets/admin/token-balance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminWallet, tokenAddress })
-      })
-      await this.handleResponse(response)
-      const result = await response.json()
-      console.log('✅ Admin token balance:', result.balance)
-      return result.balance
+        body: JSON.stringify({ adminWallet, tokenAddress }),
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      const result = await response.json();
+      console.log('✅ Admin token balance:', result.balance);
+      return result.balance;
     } catch (error) {
-      console.error('❌ Failed to get admin token balance:', error)
-      throw new Error(`Failed to get admin token balance: ${error.message}`)
+      console.error('❌ Failed to get admin token balance:', error);
+      throw new Error(`Failed to get admin token balance: ${error.message}`);
     }
   }
 
   // Distribution - Maps to your distributeSol function in utility.ts
   async distributeSol(adminWallet: WalletData, tradingWallets: WalletData[], totalAmount: number): Promise<WalletData[]> {
     try {
-      console.log('💸 Distributing SOL to wallets...')
+      console.log('💸 Distributing SOL to wallets...');
       const response = await fetch(`${this.baseUrl}/distribution/sol`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminWallet, tradingWallets, totalAmount })
-      })
-      await this.handleResponse(response)
-      const result = await response.json()
-      console.log('✅ SOL distributed successfully')
-      return Array.isArray(result) ? result : result.successWallets || result
+        body: JSON.stringify({ adminWallet, tradingWallets, totalAmount }),
+        signal: AbortSignal.timeout(30000) // Longer timeout for distribution
+      });
+      await this.handleResponse(response);
+      const result = await response.json();
+      console.log('✅ SOL distributed successfully');
+      return Array.isArray(result) ? result : result.successWallets || result;
     } catch (error) {
-      console.error('❌ Failed to distribute SOL:', error)
-      throw new Error(`Failed to distribute SOL: ${error.message}`)
+      console.error('❌ Failed to distribute SOL:', error);
+      throw new Error(`Failed to distribute SOL: ${error.message}`);
     }
   }
 
   // Maps to your distributeTokens function in utility.ts
   async distributeTokens(adminWallet: WalletData, tradingWallets: WalletData[], tokenAddress: string, amountPerWallet: number): Promise<WalletData[]> {
     try {
-      console.log('🪙 Distributing tokens to wallets...')
+      console.log('🪙 Distributing tokens to wallets...');
       const response = await fetch(`${this.baseUrl}/distribution/tokens`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminWallet, tradingWallets, tokenAddress, amountPerWallet })
-      })
-      await this.handleResponse(response)
-      const updatedWallets = await response.json()
-      console.log('✅ Tokens distributed successfully')
-      return updatedWallets
+        body: JSON.stringify({ adminWallet, tradingWallets, tokenAddress, amountPerWallet }),
+        signal: AbortSignal.timeout(30000) // Longer timeout for distribution
+      });
+      await this.handleResponse(response);
+      const updatedWallets = await response.json();
+      console.log('✅ Tokens distributed successfully');
+      return updatedWallets;
     } catch (error) {
-      console.error('❌ Failed to distribute tokens:', error)
-      throw new Error(`Failed to distribute tokens: ${error.message}`)
+      console.error('❌ Failed to distribute tokens:', error);
+      throw new Error(`Failed to distribute tokens: ${error.message}`);
     }
   }
 
   // Trading - Maps to your dynamicTrade function in dynamicTrade.ts
   async startTrading(strategy: string, sessionData: SessionData): Promise<void> {
     try {
-      console.log('🚀 Starting trading with strategy:', strategy)
+      console.log('🚀 Starting trading with strategy:', strategy);
       const response = await fetch(`${this.baseUrl}/trading/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ strategy, sessionData })
-      })
-      await this.handleResponse(response)
-      console.log('✅ Trading started successfully')
+        body: JSON.stringify({ strategy, sessionData }),
+        signal: AbortSignal.timeout(15000)
+      });
+      await this.handleResponse(response);
+      console.log('✅ Trading started successfully');
     } catch (error) {
-      console.error('❌ Failed to start trading:', error)
-      throw new Error(`Failed to start trading: ${error.message}`)
+      console.error('❌ Failed to start trading:', error);
+      throw new Error(`Failed to start trading: ${error.message}`);
     }
   }
 
   async pauseTrading(): Promise<void> {
     try {
-      console.log('⏸️ Pausing trading...')
+      console.log('⏸️ Pausing trading...');
       const response = await fetch(`${this.baseUrl}/trading/pause`, {
-        method: 'POST'
-      })
-      await this.handleResponse(response)
-      console.log('✅ Trading paused')
+        method: 'POST',
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      console.log('✅ Trading paused');
     } catch (error) {
-      console.error('❌ Failed to pause trading:', error)
-      throw new Error(`Failed to pause trading: ${error.message}`)
+      console.error('❌ Failed to pause trading:', error);
+      throw new Error(`Failed to pause trading: ${error.message}`);
     }
   }
 
   async resumeTrading(): Promise<void> {
     try {
-      console.log('▶️ Resuming trading...')
+      console.log('▶️ Resuming trading...');
       const response = await fetch(`${this.baseUrl}/trading/resume`, {
-        method: 'POST'
-      })
-      await this.handleResponse(response)
-      console.log('✅ Trading resumed')
+        method: 'POST',
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      console.log('✅ Trading resumed');
     } catch (error) {
-      console.error('❌ Failed to resume trading:', error)
-      throw new Error(`Failed to resume trading: ${error.message}`)
+      console.error('❌ Failed to resume trading:', error);
+      throw new Error(`Failed to resume trading: ${error.message}`);
     }
   }
 
   async stopTrading(): Promise<void> {
     try {
-      console.log('⏹️ Stopping trading...')
+      console.log('⏹️ Stopping trading...');
       const response = await fetch(`${this.baseUrl}/trading/stop`, {
-        method: 'POST'
-      })
-      await this.handleResponse(response)
-      console.log('✅ Trading stopped')
+        method: 'POST',
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      console.log('✅ Trading stopped');
     } catch (error) {
-      console.error('❌ Failed to stop trading:', error)
-      throw new Error(`Failed to stop trading: ${error.message}`)
+      console.error('❌ Failed to stop trading:', error);
+      throw new Error(`Failed to stop trading: ${error.message}`);
     }
   }
 
   // Restart Points - Maps to your index.ts restart options (1-6)
   async restartFromPoint(point: number, sessionData: SessionData): Promise<void> {
     try {
-      console.log('🔄 Restarting from point:', point)
+      console.log('🔄 Restarting from point:', point);
       const response = await fetch(`${this.baseUrl}/restart/${point}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionData })
-      })
-      await this.handleResponse(response)
-      console.log('✅ Restart initiated successfully')
+        body: JSON.stringify({ sessionData }),
+        signal: AbortSignal.timeout(20000)
+      });
+      await this.handleResponse(response);
+      console.log('✅ Restart initiated successfully');
     } catch (error) {
-      console.error('❌ Failed to restart from point:', error)
-      throw new Error(`Failed to restart from point: ${error.message}`)
+      console.error('❌ Failed to restart from point:', error);
+      throw new Error(`Failed to restart from point: ${error.message}`);
     }
   }
 
   // Cleanup - Maps to your closeTokenAccountsAndSendBalance function in addedOptions.ts
   async closeTokenAccountsAndSendBalance(sessionData: SessionData): Promise<void> {
     try {
-      console.log('🧹 Closing token accounts...')
+      console.log('🧹 Closing token accounts...');
       const response = await fetch(`${this.baseUrl}/cleanup/close-accounts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionData })
-      })
-      await this.handleResponse(response)
-      console.log('✅ Token accounts closed successfully')
+        body: JSON.stringify({ sessionData }),
+        signal: AbortSignal.timeout(30000) // Longer timeout for cleanup
+      });
+      await this.handleResponse(response);
+      console.log('✅ Token accounts closed successfully');
     } catch (error) {
-      console.error('❌ Failed to close token accounts:', error)
-      throw new Error(`Failed to close token accounts: ${error.message}`)
+      console.error('❌ Failed to close token accounts:', error);
+      throw new Error(`Failed to close token accounts: ${error.message}`);
     }
   }
 
   // Environment File Generation - Maps to your updateEnvFile function in utility.ts
   async generateEnvFile(sessionData: SessionData): Promise<string> {
     try {
-      console.log('📄 Generating environment file...')
+      console.log('📄 Generating environment file...');
       const response = await fetch(`${this.baseUrl}/sessions/export-env`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionData })
-      })
-      await this.handleResponse(response)
-      const envContent = await response.text()
-      console.log('✅ Environment file generated')
-      return envContent
+        body: JSON.stringify({ sessionData }),
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      const envContent = await response.text();
+      console.log('✅ Environment file generated');
+      return envContent;
     } catch (error) {
-      console.error('❌ Failed to generate env file:', error)
-      throw new Error(`Failed to generate env file: ${error.message}`)
+      console.error('❌ Failed to generate env file:', error);
+      throw new Error(`Failed to generate env file: ${error.message}`);
     }
   }
 
   // Configuration Management
   async saveSwapConfig(config: any): Promise<void> {
     try {
-      console.log('💾 Saving swap configuration...')
+      console.log('💾 Saving swap configuration...');
       const response = await fetch(`${this.baseUrl}/config/swap`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config })
-      })
-      await this.handleResponse(response)
-      console.log('✅ Swap configuration saved')
+        body: JSON.stringify({ config }),
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      console.log('✅ Swap configuration saved');
     } catch (error) {
-      console.error('❌ Failed to save swap configuration:', error)
-      throw new Error(`Failed to save swap configuration: ${error.message}`)
+      console.error('❌ Failed to save swap configuration:', error);
+      throw new Error(`Failed to save swap configuration: ${error.message}`);
     }
   }
 
   async getSwapConfig(): Promise<any> {
     try {
-      console.log('🔍 Getting swap configuration...')
-      const response = await fetch(`${this.baseUrl}/config/swap`)
-      await this.handleResponse(response)
-      const config = await response.json()
-      console.log('✅ Swap configuration retrieved')
-      return config
+      console.log('🔍 Getting swap configuration...');
+      const response = await fetch(`${this.baseUrl}/config/swap`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      const config = await response.json();
+      console.log('✅ Swap configuration retrieved');
+      return config;
     } catch (error) {
-      console.error('❌ Failed to get swap configuration:', error)
-      throw new Error(`Failed to get swap configuration: ${error.message}`)
+      console.error('❌ Failed to get swap configuration:', error);
+      throw new Error(`Failed to get swap configuration: ${error.message}`);
     }
   }
 
   async testRpcConnection(rpcUrl: string): Promise<{ success: boolean, latency: number }> {
     try {
-      console.log('🔍 Testing RPC connection:', rpcUrl)
-      const startTime = Date.now()
+      console.log('🔍 Testing RPC connection:', rpcUrl);
+      const startTime = Date.now();
       const response = await fetch(`${this.baseUrl}/config/test-rpc`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rpcUrl })
-      })
-      const latency = Date.now() - startTime
+        body: JSON.stringify({ rpcUrl }),
+        signal: AbortSignal.timeout(15000)
+      });
+      const latency = Date.now() - startTime;
       
       if (response.ok) {
-        const result = await response.json()
-        console.log('✅ RPC connection test successful:', result)
-        return { success: result.success, latency }
+        const result = await response.json();
+        console.log('✅ RPC connection test successful:', result);
+        return { success: result.success, latency };
       } else {
-        console.error('❌ RPC connection test failed')
-        return { success: false, latency }
+        console.error('❌ RPC connection test failed');
+        return { success: false, latency };
       }
     } catch (error) {
-      console.error('❌ RPC connection test failed:', error)
-      return { success: false, latency: 0 }
+      console.error('❌ RPC connection test failed:', error);
+      return { success: false, latency: 0 };
     }
   }
 
   // Health check
   async checkHealth(): Promise<{ status: string; timestamp: string; tradingActive: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`)
-      await this.handleResponse(response)
-      return await response.json()
+      const response = await fetch(`${this.baseUrl}/health`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      await this.handleResponse(response);
+      return await response.json();
     } catch (error) {
-      console.error('❌ Health check failed:', error)
-      throw new Error(`Health check failed: ${error.message}`)
+      console.error('❌ Health check failed:', error);
+      throw new Error(`Health check failed: ${error.message}`);
     }
   }
 }

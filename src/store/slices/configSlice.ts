@@ -35,8 +35,10 @@ interface ConfigState {
 }
 
 const defaultSwapConfig: SwapConfig = {
-  RPC_URL: "https://shy-yolo-theorem.solana-mainnet.quiknode.pro/1796bb57c2fdd2a536ae9f46f2d0fd57a9f27bc3/",
-  WS_URL: "wss://shy-yolo-theorem.solana-mainnet.quiknode.pro/1796bb57c2fdd2a536ae9f46f2d0fd57a9f27bc3/",
+  // Updated RPC URL with fallback
+  RPC_URL: "https://floral-capable-sun.solana-mainnet.quiknode.pro/569466c8ec8e71909ae64117473d0bd3327e133a/",
+  // Updated WebSocket URL with fallback
+  WS_URL: "wss://floral-capable-sun.solana-mainnet.quiknode.pro/569466c8ec8e71909ae64117473d0bd3327e133a/",
   WSOL_ADDRESS: "So11111111111111111111111111111111111111112",
   RAYDIUM_LIQUIDITY_POOL_V4_ADDRESS: "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
   SLIPPAGE_PERCENT: 5,

@@ -28,7 +28,8 @@ const initialState: WebSocketState = {
   reconnectAttempts: 0,
   maxReconnectAttempts: 5,
   reconnectInterval: 3000,
-  url: 'wss://shy-yolo-theorem.solana-mainnet.quiknode.pro/1796bb57c2fdd2a536ae9f46f2d0fd57a9f27bc3/', // Your WebSocket URL
+  // Updated WebSocket URL with fallback
+  url: 'wss://floral-capable-sun.solana-mainnet.quiknode.pro/569466c8ec8e71909ae64117473d0bd3327e133a/',
 }
 
 const websocketSlice = createSlice({
@@ -81,57 +82,36 @@ export const {
   setUrl,
 } = websocketSlice.actions
 
-// Async thunk for WebSocket initialization
+// Improved WebSocket initialization with error handling
 export const initializeWebSocket = () => (dispatch: any, getState: any) => {
   const { websocket } = getState()
   
   if (websocket.connection) {
-    websocket.connection.close()
+    try {
+      websocket.connection.close()
+    } catch (err) {
+      console.error("Error closing existing WebSocket:", err)
+    }
   }
 
   const connect = () => {
     dispatch(setStatus('connecting'))
     
     try {
-      const ws = new WebSocket(websocket.url)
+      // Create WebSocket with error handling
+      let ws: WebSocket | null = null
       
-      ws.onopen = () => {
-        console.log('WebSocket connected to:', websocket.url)
-        dispatch(setConnection(ws))
-        dispatch(setStatus('connected'))
-        dispatch(resetReconnectAttempts())
+      try {
+        ws = new WebSocket(websocket.url)
+      } catch (error) {
+        console.error('Failed to create WebSocket connection:', error)
+        dispatch(setStatus('error'))
         dispatch(addMessage({
-          type: 'system',
-          data: { message: 'Connected to Solana RPC WebSocket' }
-        }))
-      }
-      
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          dispatch(addMessage({
-            type: data.type || 'message',
-            data: data
-          }))
-        } catch (error) {
-          console.error('Failed to parse WebSocket message:', error)
-          dispatch(addMessage({
-            type: 'raw',
-            data: { message: event.data }
-          }))
-        }
-      }
-      
-      ws.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason)
-        dispatch(setConnection(null))
-        dispatch(setStatus('disconnected'))
-        dispatch(addMessage({
-          type: 'system',
-          data: { message: 'Disconnected from Solana RPC WebSocket', code: event.code, reason: event.reason }
+          type: 'error',
+          data: { message: 'Failed to create WebSocket connection', error }
         }))
         
-        // Attempt to reconnect
+        // Try reconnecting
         const state = getState()
         if (state.websocket.reconnectAttempts < state.websocket.maxReconnectAttempts) {
           dispatch(incrementReconnectAttempts())
@@ -140,24 +120,84 @@ export const initializeWebSocket = () => (dispatch: any, getState: any) => {
             connect()
           }, state.websocket.reconnectInterval)
         }
+        return
       }
       
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error)
-        dispatch(setStatus('error'))
-        dispatch(addMessage({
-          type: 'error',
-          data: { message: 'WebSocket connection error', error }
-        }))
+      // Only set event handlers if WebSocket was created successfully
+      if (ws) {
+        ws.onopen = () => {
+          console.log('WebSocket connected to:', websocket.url)
+          dispatch(setConnection(ws))
+          dispatch(setStatus('connected'))
+          dispatch(resetReconnectAttempts())
+          dispatch(addMessage({
+            type: 'system',
+            data: { message: 'Connected to Solana RPC WebSocket' }
+          }))
+        }
+        
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
+            dispatch(addMessage({
+              type: data.type || 'message',
+              data: data
+            }))
+          } catch (error) {
+            console.error('Failed to parse WebSocket message:', error)
+            dispatch(addMessage({
+              type: 'raw',
+              data: { message: event.data }
+            }))
+          }
+        }
+        
+        ws.onclose = (event) => {
+          console.log('WebSocket disconnected:', event.code, event.reason)
+          dispatch(setConnection(null))
+          dispatch(setStatus('disconnected'))
+          dispatch(addMessage({
+            type: 'system',
+            data: { message: 'Disconnected from Solana RPC WebSocket', code: event.code, reason: event.reason }
+          }))
+          
+          // Attempt to reconnect
+          const state = getState()
+          if (state.websocket.reconnectAttempts < state.websocket.maxReconnectAttempts) {
+            dispatch(incrementReconnectAttempts())
+            setTimeout(() => {
+              console.log(`Reconnecting... Attempt ${state.websocket.reconnectAttempts + 1}`)
+              connect()
+            }, state.websocket.reconnectInterval)
+          }
+        }
+        
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error)
+          dispatch(setStatus('error'))
+          dispatch(addMessage({
+            type: 'error',
+            data: { message: 'WebSocket connection error', error }
+          }))
+        }
       }
-      
     } catch (error) {
-      console.error('Failed to create WebSocket connection:', error)
+      console.error('Failed to initialize WebSocket connection:', error)
       dispatch(setStatus('error'))
       dispatch(addMessage({
         type: 'error',
-        data: { message: 'Failed to create WebSocket connection', error }
+        data: { message: 'Failed to initialize WebSocket connection', error }
       }))
+      
+      // Try reconnecting
+      const state = getState()
+      if (state.websocket.reconnectAttempts < state.websocket.maxReconnectAttempts) {
+        dispatch(incrementReconnectAttempts())
+        setTimeout(() => {
+          console.log(`Reconnecting... Attempt ${state.websocket.reconnectAttempts + 1}`)
+          connect()
+        }, state.websocket.reconnectInterval)
+      }
     }
   }
   
