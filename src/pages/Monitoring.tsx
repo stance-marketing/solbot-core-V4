@@ -18,17 +18,34 @@ import ConsoleOutput from '../components/monitoring/ConsoleOutput'
 import TradingAnalytics from '../components/monitoring/TradingAnalytics'
 import { useSelector } from 'react-redux'
 import { RootState } from '../store/store'
+import toast from 'react-hot-toast'
+import { monitoringService } from '../services/monitoringService'
 
 const Monitoring: React.FC = () => {
   const { currentSession } = useSelector((state: RootState) => state.session)
   const [activeTab, setActiveTab] = useState<'console' | 'logs' | 'errors' | 'performance' | 'health' | 'balances' | 'analytics'>('console')
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const refreshData = () => {
+  const refreshData = async () => {
     setIsRefreshing(true)
-    setTimeout(() => {
+    try {
+      // Refresh all monitoring data
+      await Promise.all([
+        monitoringService.getLogs(),
+        monitoringService.getConsoleOutput(),
+        monitoringService.getErrors(),
+        monitoringService.getPerformanceMetrics(),
+        monitoringService.getSystemHealth(),
+        monitoringService.getBalanceChanges(),
+        monitoringService.getTradingAnalytics()
+      ]);
+      
+      toast.success('All monitoring data refreshed')
+    } catch (error) {
+      toast.error('Failed to refresh some monitoring data')
+    } finally {
       setIsRefreshing(false)
-    }, 1000)
+    }
   }
 
   const tabs = [
@@ -99,7 +116,7 @@ const Monitoring: React.FC = () => {
               maxHeight="600px"
               showControls={true}
               autoScroll={true}
-              refreshInterval={2000}
+              refreshInterval={5000}
             />
           )}
 

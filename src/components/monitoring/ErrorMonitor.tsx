@@ -14,19 +14,7 @@ import {
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
 import toast from 'react-hot-toast'
-
-interface ErrorData {
-  id: string
-  timestamp: number
-  message: string
-  source: string
-  stack?: string
-  resolved: boolean
-  resolvedAt?: number
-  severity: 'critical' | 'high' | 'medium' | 'low'
-  occurrences: number
-  lastOccurrence: number
-}
+import { monitoringService, ErrorData } from '../../services/monitoringService'
 
 interface ErrorMonitorProps {
   errors?: ErrorData[]
@@ -47,45 +35,31 @@ const ErrorMonitor: React.FC<ErrorMonitorProps> = ({
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'resolved'>('all')
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  // Convert websocket error messages to error data if no errors are provided
+  // Fetch errors from backend
   useEffect(() => {
-    if (propErrors) {
-      setErrors(propErrors)
-    } else {
-      const errorMessages = messages.filter(msg => msg.type === 'error')
-      
-      // Group similar errors
-      const errorMap = new Map<string, ErrorData>()
-      
-      errorMessages.forEach(msg => {
-        const errorMessage = typeof msg.data === 'string' ? msg.data : msg.data.message || JSON.stringify(msg.data)
-        const errorKey = errorMessage.slice(0, 100) // Use first 100 chars as key
-        
-        if (errorMap.has(errorKey)) {
-          const existingError = errorMap.get(errorKey)!
-          errorMap.set(errorKey, {
-            ...existingError,
-            occurrences: existingError.occurrences + 1,
-            lastOccurrence: msg.timestamp
-          })
-        } else {
-          errorMap.set(errorKey, {
-            id: msg.id,
-            timestamp: msg.timestamp,
-            message: errorMessage,
-            source: msg.data.source || 'unknown',
-            stack: msg.data.stack,
-            resolved: false,
-            severity: getSeverity(errorMessage),
-            occurrences: 1,
-            lastOccurrence: msg.timestamp
-          })
-        }
-      })
-      
-      setErrors(Array.from(errorMap.values()))
+    fetchErrors()
+    
+    // Set up auto-refresh
+    const interval = setInterval(() => {
+      fetchErrors()
+    }, 10000) // Refresh every 10 seconds
+    
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchErrors = async () => {
+    if (isRefreshing) return
+    
+    setIsRefreshing(true)
+    try {
+      const fetchedErrors = await monitoringService.getErrors(50)
+      setErrors(fetchedErrors)
+    } catch (error) {
+      console.error('Failed to fetch errors:', error)
+    } finally {
+      setIsRefreshing(false)
     }
-  }, [propErrors, messages])
+  }
 
   // Filter errors based on search term, severity, and status
   useEffect(() => {
@@ -93,7 +67,7 @@ const ErrorMonitor: React.FC<ErrorMonitorProps> = ({
     
     if (searchTerm) {
       filtered = filtered.filter(error => 
-        error instanceof Error ? error.message : String(error).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        error.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
         error.source.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
@@ -111,40 +85,21 @@ const ErrorMonitor: React.FC<ErrorMonitorProps> = ({
     setFilteredErrors(filtered)
   }, [errors, searchTerm, severityFilter, statusFilter])
 
-  const getSeverity = (message: string): 'critical' | 'high' | 'medium' | 'low' => {
-    const lowerMessage = message.toLowerCase()
-    
-    if (lowerMessage.includes('critical') || 
-        lowerMessage.includes('fatal') || 
-        lowerMessage.includes('crash')) {
-      return 'critical'
-    }
-    
-    if (lowerMessage.includes('error') || 
-        lowerMessage.includes('exception') || 
-        lowerMessage.includes('failed')) {
-      return 'high'
-    }
-    
-    if (lowerMessage.includes('warning') || 
-        lowerMessage.includes('timeout') || 
-        lowerMessage.includes('retry')) {
-      return 'medium'
-    }
-    
-    return 'low'
-  }
-
-  const handleResolveError = (id: string) => {
-    if (onResolve) {
-      onResolve(id)
-    } else {
-      setErrors(prev => prev.map(error => 
-        error.id === id 
-          ? { ...error, resolved: true, resolvedAt: Date.now() } 
-          : error
-      ))
-      toast.success('Error marked as resolved')
+  const handleResolveError = async (id: string) => {
+    try {
+      if (onResolve) {
+        onResolve(id)
+      } else {
+        await monitoringService.resolveError(id)
+        setErrors(prev => prev.map(error => 
+          error.id === id 
+            ? { ...error, resolved: true, resolvedAt: Date.now() } 
+            : error
+        ))
+        toast.success('Error marked as resolved')
+      }
+    } catch (error) {
+      toast.error('Failed to resolve error')
     }
   }
 
@@ -159,18 +114,21 @@ const ErrorMonitor: React.FC<ErrorMonitorProps> = ({
     }
   }
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true)
-    // In a real implementation, you would fetch fresh error data
-    setTimeout(() => {
-      setIsRefreshing(false)
+    try {
+      await fetchErrors()
       toast.success('Error data refreshed')
-    }, 1000)
+    } catch (error) {
+      toast.error('Failed to refresh error data')
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   const downloadErrorReport = () => {
     const content = errors.map(error => 
-      `[${new Date(error.timestamp).toISOString()}] [${error.severity.toUpperCase()}] [${error.source}] ${error instanceof Error ? error.message : String(error)}${error.stack ? '\nStack: ' + error.stack : ''}`
+      `[${new Date(error.timestamp).toISOString()}] [${error.severity.toUpperCase()}] [${error.source}] ${error.message}${error.stack ? '\nStack: ' + error.stack : ''}`
     ).join('\n\n')
     
     const blob = new Blob([content], { type: 'text/plain' })
@@ -328,7 +286,7 @@ const ErrorMonitor: React.FC<ErrorMonitorProps> = ({
                   <div>
                     <div className="flex items-center space-x-2">
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {error instanceof Error ? error.message : String(error).length > 100 ? error instanceof Error ? error.message : String(error).slice(0, 100) + '...' : error instanceof Error ? error.message : String(error)}
+                        {error.message.length > 100 ? error.message.slice(0, 100) + '...' : error.message}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${getSeverityColor(error.severity)}`}>
                         {error.severity}

@@ -6,25 +6,19 @@ import {
   Clock, 
   RefreshCw,
   Zap,
+  Target,
+  Timer,
+  RotateCcw,
+  ArrowDown,
   Database,
-  Server,
-  Wifi,
-  HardDrive,
-  Cpu
+  Calculator,
+  Trash2
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
 import { backendService } from '../../services/backendService'
+import { monitoringService, SystemHealth } from '../../services/monitoringService'
 import toast from 'react-hot-toast'
-
-interface SystemComponent {
-  name: string
-  status: 'operational' | 'degraded' | 'outage' | 'unknown'
-  lastChecked: number
-  responseTime?: number
-  details?: string
-  icon: React.ComponentType<{ className?: string }>
-}
 
 interface SystemHealthMonitorProps {
   refreshInterval?: number
@@ -38,49 +32,9 @@ const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({
   const { status: wsStatus } = useSelector((state: RootState) => state.websocket)
   const { swapConfig } = useSelector((state: RootState) => state.config)
   
-  const [components, setComponents] = useState<SystemComponent[]>([
-    { 
-      name: 'Backend API', 
-      status: 'unknown', 
-      lastChecked: Date.now(),
-      icon: Server
-    },
-    { 
-      name: 'Solana RPC', 
-      status: 'unknown', 
-      lastChecked: Date.now(),
-      icon: Database
-    },
-    { 
-      name: 'WebSocket Connection', 
-      status: 'unknown', 
-      lastChecked: Date.now(),
-      icon: Wifi
-    },
-    { 
-      name: 'Trading Engine', 
-      status: 'unknown', 
-      lastChecked: Date.now(),
-      icon: Zap
-    },
-    { 
-      name: 'Session Storage', 
-      status: 'unknown', 
-      lastChecked: Date.now(),
-      icon: HardDrive
-    },
-    { 
-      name: 'System Resources', 
-      status: 'unknown', 
-      lastChecked: Date.now(),
-      icon: Cpu
-    }
-  ])
-  
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [systemUptime, setSystemUptime] = useState<number>(0)
-  const [startTime] = useState<number>(Date.now())
 
   // Check system health periodically
   useEffect(() => {
@@ -93,86 +47,16 @@ const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({
     return () => clearInterval(interval)
   }, [refreshInterval, wsStatus])
 
-  // Update uptime
-  useEffect(() => {
-    const uptimeInterval = setInterval(() => {
-      setSystemUptime(Date.now() - startTime)
-    }, 1000)
-    
-    return () => clearInterval(uptimeInterval)
-  }, [startTime])
-
   const checkSystemHealth = async () => {
     setIsRefreshing(true)
     
     try {
-      // Check backend API
-      const healthCheck = await backendService.checkHealth()
-      
-      // Update components
-      setComponents(prev => prev.map(component => {
-        switch (component.name) {
-          case 'Backend API':
-            return {
-              ...component,
-              status: healthCheck.status === 'ok' ? 'operational' : 'outage',
-              lastChecked: Date.now(),
-              responseTime: Math.floor(Math.random() * 100 + 50), // Mock response time
-              details: `API version: 1.0.0`
-            }
-          case 'Solana RPC':
-            return {
-              ...component,
-              status: healthCheck.status === 'ok' ? 'operational' : 'outage',
-              lastChecked: Date.now(),
-              responseTime: Math.floor(Math.random() * 200 + 100), // Mock response time
-              details: `Endpoint: ${swapConfig.RPC_URL.slice(0, 30)}...`
-            }
-          case 'WebSocket Connection':
-            return {
-              ...component,
-              status: wsStatus === 'connected' ? 'operational' : 
-                     wsStatus === 'connecting' ? 'degraded' : 'outage',
-              lastChecked: Date.now(),
-              details: `Status: ${wsStatus}`
-            }
-          case 'Trading Engine':
-            return {
-              ...component,
-              status: healthCheck.tradingActive ? 'operational' : 'degraded',
-              lastChecked: Date.now(),
-              details: healthCheck.tradingActive ? 'Active' : 'Idle'
-            }
-          case 'Session Storage':
-            return {
-              ...component,
-              status: 'operational', // Assume operational
-              lastChecked: Date.now(),
-              details: `Directory: ${swapConfig.SESSION_DIR}`
-            }
-          case 'System Resources':
-            return {
-              ...component,
-              status: Math.random() > 0.1 ? 'operational' : 'degraded', // Randomly show degraded sometimes
-              lastChecked: Date.now(),
-              details: `CPU: ${Math.floor(Math.random() * 30 + 10)}%, Memory: ${Math.floor(Math.random() * 40 + 20)}%`
-            }
-          default:
-            return component
-        }
-      }))
-      
+      const health = await monitoringService.getSystemHealth()
+      setSystemHealth(health)
       setLastUpdated(new Date())
     } catch (error) {
-      console.error('Error checking system health:', error)
+      console.error('Failed to check system health:', error)
       toast.error('Failed to check system health')
-      
-      // Update backend API status to outage
-      setComponents(prev => prev.map(component => 
-        component.name === 'Backend API' 
-          ? { ...component, status: 'outage', lastChecked: Date.now() }
-          : component
-      ))
     } finally {
       setIsRefreshing(false)
     }
@@ -242,9 +126,9 @@ const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({
   }
 
   // Calculate overall system status
-  const overallStatus = components.every(c => c.status === 'operational') 
+  const overallStatus = systemHealth?.components.every(c => c.status === 'operational') 
     ? 'operational' 
-    : components.some(c => c.status === 'outage') 
+    : systemHealth?.components.some(c => c.status === 'outage') 
     ? 'outage' 
     : 'degraded'
 
@@ -277,87 +161,101 @@ const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({
       </div>
 
       {/* Overall Status */}
-      <div className={`mb-6 p-4 rounded-lg ${getStatusColor(overallStatus)}`}>
-        <div className="flex items-center space-x-3">
-          {getStatusIcon(overallStatus)}
-          <div>
-            <h3 className="font-medium">
-              System Status: {getStatusText(overallStatus)}
-            </h3>
-            <p className="text-sm mt-1">
-              {overallStatus === 'operational' 
-                ? 'All systems are operational' 
-                : overallStatus === 'degraded'
-                ? 'Some systems are experiencing issues'
-                : 'Critical systems are down'}
-            </p>
+      {systemHealth && (
+        <div className={`mb-6 p-4 rounded-lg ${getStatusColor(overallStatus)}`}>
+          <div className="flex items-center space-x-3">
+            {getStatusIcon(overallStatus)}
+            <div>
+              <h3 className="font-medium">
+                System Status: {getStatusText(overallStatus)}
+              </h3>
+              <p className="text-sm mt-1">
+                {overallStatus === 'operational' 
+                  ? 'All systems are operational' 
+                  : overallStatus === 'degraded'
+                  ? 'Some systems are experiencing issues'
+                  : 'Critical systems are down'}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Uptime */}
-      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-        <div className="flex items-center space-x-3">
-          <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <div>
-            <h3 className="font-medium text-blue-800 dark:text-blue-300">
-              System Uptime
-            </h3>
-            <p className="text-lg font-bold text-blue-900 dark:text-blue-100 mt-1">
-              {formatUptime(systemUptime)}
-            </p>
+      {systemHealth && (
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div>
+              <h3 className="font-medium text-blue-800 dark:text-blue-300">
+                System Uptime
+              </h3>
+              <p className="text-lg font-bold text-blue-900 dark:text-blue-100 mt-1">
+                {formatUptime(systemHealth.uptime)}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Component Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {components.map((component) => {
-          const ComponentIcon = component.icon
-          return (
-            <div
-              key={component.name}
-              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow duration-200"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <ComponentIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  <h3 className="font-medium text-gray-900 dark:text-white">
-                    {component.name}
-                  </h3>
-                </div>
-                
-                <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(component.status)}`}>
-                  {getStatusIcon(component.status)}
-                  <span>{getStatusText(component.status)}</span>
-                </div>
-              </div>
-              
-              {showDetails && (
-                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                  <div className="flex justify-between">
-                    <span>Last checked:</span>
-                    <span>{formatTimeAgo(component.lastChecked)}</span>
+      {systemHealth ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {systemHealth.components.map((component) => {
+            return (
+              <div
+                key={component.name}
+                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow duration-200"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-3 h-3 rounded-full ${
+                      component.status === 'operational' ? 'bg-green-500' :
+                      component.status === 'degraded' ? 'bg-yellow-500' :
+                      'bg-red-500'
+                    }`}></div>
+                    <h3 className="font-medium text-gray-900 dark:text-white">
+                      {component.name}
+                    </h3>
                   </div>
                   
-                  {component.responseTime && (
-                    <div className="flex justify-between">
-                      <span>Response time:</span>
-                      <span>{component.responseTime}ms</span>
-                    </div>
-                  )}
-                  
-                  {component.details && (
-                    <div className="pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">
-                      {component.details}
-                    </div>
-                  )}
+                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(component.status)}`}>
+                    {getStatusIcon(component.status)}
+                    <span>{getStatusText(component.status)}</span>
+                  </div>
                 </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+                
+                {showDetails && (
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Last checked:</span>
+                      <span>{formatTimeAgo(component.lastChecked)}</span>
+                    </div>
+                    
+                    {component.responseTime && (
+                      <div className="flex justify-between">
+                        <span>Response time:</span>
+                        <span>{component.responseTime}ms</span>
+                      </div>
+                    )}
+                    
+                    {component.details && (
+                      <div className="pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">
+                        {component.details}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+          <p className="mt-4 text-gray-500 dark:text-gray-400">Loading system health data...</p>
+        </div>
+      )}
     </div>
   )
 }

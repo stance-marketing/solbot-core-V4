@@ -17,18 +17,10 @@ import {
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
 import toast from 'react-hot-toast'
-
-interface Log {
-  id: string
-  timestamp: number
-  level: 'info' | 'warning' | 'error' | 'success' | 'debug'
-  message: string
-  source: string
-  details?: any
-}
+import { monitoringService, LogEntry } from '../../services/monitoringService'
 
 interface LogViewerProps {
-  logs?: Log[]
+  logs?: LogEntry[]
   maxHeight?: string
   title?: string
   autoScroll?: boolean
@@ -47,33 +39,41 @@ const LogViewer: React.FC<LogViewerProps> = ({
   showSource = true
 }) => {
   const { messages } = useSelector((state: RootState) => state.websocket)
-  const [logs, setLogs] = useState<Log[]>([])
-  const [filteredLogs, setFilteredLogs] = useState<Log[]>([])
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [logLevel, setLogLevel] = useState<'all' | 'info' | 'warning' | 'error' | 'success' | 'debug'>('all')
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(autoScroll)
+  const [isLoading, setIsLoading] = useState(false)
   const logContainerRef = useRef<HTMLDivElement>(null)
 
-  // Convert websocket messages to logs if no logs are provided
+  // Fetch logs from backend
   useEffect(() => {
-    if (propLogs) {
-      setLogs(propLogs)
-    } else {
-      const convertedLogs: Log[] = messages.map(msg => ({
-        id: msg.id,
-        timestamp: msg.timestamp,
-        level: msg.type === 'error' ? 'error' : 
-               msg.type === 'warning' ? 'warning' : 
-               msg.type === 'success' ? 'success' : 
-               msg.type === 'debug' ? 'debug' : 'info',
-        message: typeof msg.data === 'string' ? msg.data : 
-                 msg.data.message || JSON.stringify(msg.data),
-        source: msg.type,
-        details: msg.data
-      }))
-      setLogs(convertedLogs)
+    fetchLogs()
+    
+    // Set up auto-refresh
+    const interval = setInterval(() => {
+      if (autoScrollEnabled) {
+        fetchLogs()
+      }
+    }, 5000) // Refresh every 5 seconds
+    
+    return () => clearInterval(interval)
+  }, [autoScrollEnabled])
+
+  const fetchLogs = async () => {
+    if (isLoading) return
+    
+    setIsLoading(true)
+    try {
+      const fetchedLogs = await monitoringService.getLogs(100, logLevel !== 'all' ? logLevel : undefined)
+      setLogs(fetchedLogs)
+    } catch (error) {
+      console.error('Failed to fetch logs:', error)
+    } finally {
+      setIsLoading(false)
     }
-  }, [propLogs, messages])
+  }
 
   // Filter logs based on search term and log level
   useEffect(() => {
@@ -189,7 +189,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     }
   }
 
-  const formatTimestamp = (timestamp: number) => {
+  const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString()
   }
 
@@ -198,9 +198,9 @@ const LogViewer: React.FC<LogViewerProps> = ({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           <Terminal className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             {title}
-          </h2>
+          </h3>
           <div className="text-sm text-gray-500 dark:text-gray-400">
             {filteredLogs.length} entries
           </div>
@@ -208,6 +208,15 @@ const LogViewer: React.FC<LogViewerProps> = ({
         
         {showControls && (
           <div className="flex items-center space-x-2">
+            <button
+              onClick={fetchLogs}
+              disabled={isLoading}
+              className="flex items-center p-1 rounded text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              title="Refresh logs"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+            
             <button
               onClick={() => setAutoScrollEnabled(!autoScrollEnabled)}
               className={`flex items-center p-1 rounded ${
@@ -298,7 +307,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
                     <div className="flex items-center space-x-2">
                       {showTimestamps && (
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatTimestamp(log.timestamp)}
+                          {formatTime(log.timestamp)}
                         </span>
                       )}
                       {showSource && (
@@ -344,8 +353,8 @@ const LogViewer: React.FC<LogViewerProps> = ({
           <div>
             {logs.length > 0 && (
               <span>
-                First: {formatTimestamp(logs[0].timestamp)} | 
-                Last: {formatTimestamp(logs[logs.length - 1].timestamp)}
+                First: {formatTime(logs[0].timestamp)} | 
+                Last: {formatTime(logs[logs.length - 1].timestamp)}
               </span>
             )}
           </div>

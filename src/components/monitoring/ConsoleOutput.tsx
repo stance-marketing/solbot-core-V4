@@ -11,9 +11,11 @@ import {
   CheckCircle,
   XCircle,
   Info,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { monitoringService } from '../../services/monitoringService'
 
 interface ConsoleOutputProps {
   logs?: string[]
@@ -30,7 +32,7 @@ const ConsoleOutput: React.FC<ConsoleOutputProps> = ({
   title = 'Console Output',
   autoScroll = true,
   showControls = true,
-  refreshInterval = 1000
+  refreshInterval = 5000
 }) => {
   const [logs, setLogs] = useState<string[]>(propLogs || [])
   const [filteredLogs, setFilteredLogs] = useState<string[]>([])
@@ -38,47 +40,36 @@ const ConsoleOutput: React.FC<ConsoleOutputProps> = ({
   const [filter, setFilter] = useState<'all' | 'info' | 'error' | 'warning' | 'success'>('all')
   const [isPaused, setIsPaused] = useState(false)
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(autoScroll)
+  const [isLoading, setIsLoading] = useState(false)
   const consoleRef = useRef<HTMLDivElement>(null)
 
-  // Generate mock logs if none provided
+  // Fetch console output from backend
   useEffect(() => {
-    if (propLogs) {
-      setLogs(propLogs)
-      return
-    }
-
-    // Only generate mock logs if not paused
+    fetchConsoleOutput()
+    
+    // Set up auto-refresh if not paused
     if (!isPaused) {
       const interval = setInterval(() => {
-        const logTypes = ['info', 'error', 'warning', 'success']
-        const logType = logTypes[Math.floor(Math.random() * logTypes.length)]
-        const timestamp = new Date().toISOString()
-        
-        let newLog: string
-        
-        switch (logType) {
-          case 'info':
-            newLog = `[${timestamp}] [INFO] Processing transaction for wallet #${Math.floor(Math.random() * 10 + 1)}`
-            break
-          case 'error':
-            newLog = `[${timestamp}] [ERROR] Failed to send transaction: Blockhash not found`
-            break
-          case 'warning':
-            newLog = `[${timestamp}] [WARNING] High network latency detected: ${Math.floor(Math.random() * 500 + 200)}ms`
-            break
-          case 'success':
-            newLog = `[${timestamp}] [SUCCESS] Transaction confirmed: ${Math.random().toString(36).substring(2, 15)}`
-            break
-          default:
-            newLog = `[${timestamp}] [INFO] System running normally`
-        }
-        
-        setLogs(prev => [...prev, newLog])
+        fetchConsoleOutput()
       }, refreshInterval)
       
       return () => clearInterval(interval)
     }
-  }, [propLogs, isPaused, refreshInterval])
+  }, [isPaused, refreshInterval])
+
+  const fetchConsoleOutput = async () => {
+    if (isLoading || isPaused) return
+    
+    setIsLoading(true)
+    try {
+      const output = await monitoringService.getConsoleOutput(100)
+      setLogs(output)
+    } catch (error) {
+      console.error('Failed to fetch console output:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // Filter logs based on search term and filter
   useEffect(() => {
@@ -174,6 +165,15 @@ const ConsoleOutput: React.FC<ConsoleOutputProps> = ({
         {showControls && (
           <div className="flex items-center space-x-2">
             <button
+              onClick={fetchConsoleOutput}
+              disabled={isLoading || isPaused}
+              className="flex items-center p-1 rounded text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 disabled:opacity-50"
+              title="Refresh console"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+            
+            <button
               onClick={togglePause}
               className={`p-1 rounded ${
                 isPaused 
@@ -201,7 +201,7 @@ const ConsoleOutput: React.FC<ConsoleOutputProps> = ({
             
             <button
               onClick={copyToClipboard}
-              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="flex items-center p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               title="Copy to clipboard"
             >
               <Copy className="w-4 h-4" />

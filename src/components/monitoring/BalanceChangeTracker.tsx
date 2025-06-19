@@ -21,21 +21,8 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts'
-
-interface BalanceChange {
-  id: string
-  timestamp: number
-  walletNumber: number
-  walletAddress: string
-  solBefore: number
-  solAfter: number
-  solChange: number
-  tokenBefore: number
-  tokenAfter: number
-  tokenChange: number
-  source: string
-  details?: string
-}
+import { monitoringService, BalanceChange } from '../../services/monitoringService'
+import toast from 'react-hot-toast'
 
 interface BalanceChangeTrackerProps {
   changes?: BalanceChange[]
@@ -56,68 +43,31 @@ const BalanceChangeTracker: React.FC<BalanceChangeTrackerProps> = ({
   const [solBalanceHistory, setSolBalanceHistory] = useState<any[]>([])
   const [tokenBalanceHistory, setTokenBalanceHistory] = useState<any[]>([])
 
-  // Initialize with mock data or use provided changes
+  // Fetch balance changes from backend
   useEffect(() => {
-    if (propChanges) {
-      setChanges(propChanges)
-    } else {
-      // Generate some mock balance changes
-      const mockChanges: BalanceChange[] = []
-      
-      // Generate data points for the last 24 hours
-      const now = Date.now()
-      const hourMs = 3600000
-      
-      for (let i = 24; i >= 0; i--) {
-        const timestamp = now - (i * hourMs)
-        
-        // Add a change for admin wallet
-        if (adminWallet) {
-          const solChange = (Math.random() - 0.4) * 0.1 // Slightly biased towards negative
-          const tokenChange = (Math.random() - 0.4) * 100
-          
-          mockChanges.push({
-            id: `admin-${timestamp}`,
-            timestamp,
-            walletNumber: 0,
-            walletAddress: adminWallet.publicKey,
-            solBefore: adminWallet.solBalance - solChange,
-            solAfter: adminWallet.solBalance,
-            solChange,
-            tokenBefore: adminWallet.tokenBalance - tokenChange,
-            tokenAfter: adminWallet.tokenBalance,
-            tokenChange,
-            source: Math.random() > 0.5 ? 'Trading' : 'Collection',
-            details: `Balance update at ${new Date(timestamp).toLocaleTimeString()}`
-          })
-        }
-        
-        // Add changes for a few trading wallets
-        for (let j = 0; j < Math.min(3, tradingWallets.length); j++) {
-          const wallet = tradingWallets[j]
-          const solChange = (Math.random() - 0.6) * 0.05 // More biased towards negative
-          const tokenChange = (Math.random() - 0.6) * 50
-          
-          mockChanges.push({
-            id: `wallet-${j}-${timestamp}`,
-            timestamp,
-            walletNumber: wallet.number,
-            walletAddress: wallet.publicKey,
-            solBefore: wallet.solBalance - solChange,
-            solAfter: wallet.solBalance,
-            solChange,
-            tokenBefore: wallet.tokenBalance - tokenChange,
-            tokenAfter: wallet.tokenBalance,
-            tokenChange,
-            source: Math.random() > 0.7 ? 'Buy' : 'Sell',
-            details: `Transaction at ${new Date(timestamp).toLocaleTimeString()}`
-          })
-        }
-      }
-      
-      setChanges(mockChanges)
+    fetchBalanceChanges()
+    
+    // Set up auto-refresh
+    const interval = setInterval(() => {
+      fetchBalanceChanges()
+    }, refreshInterval)
+    
+    return () => clearInterval(interval)
+  }, [refreshInterval])
+
+  const fetchBalanceChanges = async () => {
+    if (isRefreshing) return
+    
+    setIsRefreshing(true)
+    try {
+      const fetchedChanges = await monitoringService.getBalanceChanges(50)
+      setChanges(fetchedChanges)
+    } catch (error) {
+      console.error('Failed to fetch balance changes:', error)
+    } finally {
+      setIsRefreshing(false)
     }
-  }, [propChanges, adminWallet, tradingWallets])
+  }
 
   // Generate chart data
   useEffect(() => {
@@ -184,13 +134,16 @@ const BalanceChangeTracker: React.FC<BalanceChangeTrackerProps> = ({
     setTokenBalanceHistory(tokenData)
   }, [changes, timeRange])
 
-  const refreshData = () => {
+  const refreshData = async () => {
     setIsRefreshing(true)
-    
-    // In a real implementation, you would fetch fresh data
-    setTimeout(() => {
+    try {
+      await fetchBalanceChanges()
+      toast.success('Balance data refreshed')
+    } catch (error) {
+      toast.error('Failed to refresh balance data')
+    } finally {
       setIsRefreshing(false)
-    }, 1000)
+    }
   }
 
   const formatTimestamp = (timestamp: number) => {
@@ -275,7 +228,7 @@ const BalanceChangeTracker: React.FC<BalanceChangeTrackerProps> = ({
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4">
           <div className="flex items-center space-x-2 mb-2">
             <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Total SOL Change</span>
@@ -288,7 +241,7 @@ const BalanceChangeTracker: React.FC<BalanceChangeTrackerProps> = ({
           </div>
         </div>
 
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-4">
           <div className="flex items-center space-x-2 mb-2">
             <Coins className="w-4 h-4 text-green-600 dark:text-green-400" />
             <span className="text-sm font-medium text-green-700 dark:text-green-300">Total {tokenSymbol} Change</span>
@@ -301,7 +254,7 @@ const BalanceChangeTracker: React.FC<BalanceChangeTrackerProps> = ({
           </div>
         </div>
 
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+        <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-4">
           <div className="flex items-center space-x-2 mb-2">
             <DollarSign className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Recent SOL Change</span>
@@ -314,7 +267,7 @@ const BalanceChangeTracker: React.FC<BalanceChangeTrackerProps> = ({
           </div>
         </div>
 
-        <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-4">
           <div className="flex items-center space-x-2 mb-2">
             <Coins className="w-4 h-4 text-orange-600 dark:text-orange-400" />
             <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Recent {tokenSymbol} Change</span>

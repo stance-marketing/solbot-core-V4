@@ -28,6 +28,8 @@ import {
 } from 'recharts'
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
+import { monitoringService, TradingAnalytics as TradingAnalyticsData } from '../../services/monitoringService'
+import toast from 'react-hot-toast'
 
 interface TradingAnalyticsProps {
   refreshInterval?: number
@@ -41,145 +43,44 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
   const { laps } = useSelector((state: RootState) => state.trading)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | '30d' | 'all'>('24h')
-  
-  // Trading metrics
-  const [metrics, setMetrics] = useState({
-    totalTransactions: 0,
-    successfulTransactions: 0,
-    failedTransactions: 0,
-    successRate: 0,
-    totalVolume: 0,
-    totalFees: 0,
-    averageSlippage: 0,
-    profitLoss: 0,
-    buyCount: 0,
-    sellCount: 0,
-    averageTransactionSize: 0
-  })
-  
-  // Chart data
-  const [volumeData, setVolumeData] = useState<any[]>([])
-  const [transactionData, setTransactionData] = useState<any[]>([])
-  const [profitLossData, setProfitLossData] = useState<any[]>([])
-  const [transactionTypeData, setTransactionTypeData] = useState<any[]>([])
+  const [analytics, setAnalytics] = useState<TradingAnalyticsData | null>(null)
 
-  // Generate mock data
+  // Fetch trading analytics from backend
   useEffect(() => {
-    generateMockData()
+    fetchAnalytics()
     
+    // Set up auto-refresh
     const interval = setInterval(() => {
-      if (!isRefreshing) {
-        generateMockData()
-      }
+      fetchAnalytics()
     }, refreshInterval)
     
     return () => clearInterval(interval)
-  }, [refreshInterval, timeRange, isRefreshing])
+  }, [refreshInterval])
 
-  const generateMockData = () => {
+  const fetchAnalytics = async () => {
+    if (isRefreshing) return
+    
     setIsRefreshing(true)
-    
-    // Generate time periods based on selected range
-    const periods = timeRange === '1h' ? 12 : // 5-minute intervals
-                   timeRange === '24h' ? 24 : // 1-hour intervals
-                   timeRange === '7d' ? 7 : // 1-day intervals
-                   timeRange === '30d' ? 30 : // 1-day intervals
-                   30 // Default to 30 periods
-    
-    // Generate volume data
-    const volumeDataPoints = []
-    let totalVolume = 0
-    let totalTransactions = 0
-    let successfulTransactions = 0
-    let buyCount = 0
-    let sellCount = 0
-    
-    for (let i = 0; i < periods; i++) {
-      const buyVolume = Math.random() * 0.5 + 0.1
-      const sellVolume = Math.random() * 0.4 + 0.05
-      const buys = Math.floor(Math.random() * 10 + 5)
-      const sells = Math.floor(Math.random() * 8 + 3)
-      const failed = Math.floor(Math.random() * 2)
-      
-      totalVolume += buyVolume + sellVolume
-      totalTransactions += buys + sells + failed
-      successfulTransactions += buys + sells
-      buyCount += buys
-      sellCount += sells
-      
-      let periodLabel
-      if (timeRange === '1h') {
-        periodLabel = `${i * 5}m`
-      } else if (timeRange === '24h') {
-        periodLabel = `${i}h`
-      } else {
-        periodLabel = `Day ${i + 1}`
-      }
-      
-      volumeDataPoints.push({
-        name: periodLabel,
-        buyVolume,
-        sellVolume,
-        buys,
-        sells,
-        failed
-      })
+    try {
+      const data = await monitoringService.getTradingAnalytics()
+      setAnalytics(data)
+    } catch (error) {
+      console.error('Failed to fetch trading analytics:', error)
+    } finally {
+      setIsRefreshing(false)
     }
-    
-    // Calculate metrics
-    const successRate = (successfulTransactions / totalTransactions) * 100
-    const totalFees = totalVolume * 0.003 // Assume 0.3% fee
-    const averageSlippage = Math.random() * 1.5 + 0.5 // 0.5% to 2%
-    const profitLoss = (Math.random() * 2 - 0.8) * totalVolume // Random profit/loss
-    const averageTransactionSize = totalVolume / successfulTransactions
-    
-    setMetrics({
-      totalTransactions,
-      successfulTransactions,
-      failedTransactions: totalTransactions - successfulTransactions,
-      successRate,
-      totalVolume,
-      totalFees,
-      averageSlippage,
-      profitLoss,
-      buyCount,
-      sellCount,
-      averageTransactionSize
-    })
-    
-    // Set chart data
-    setVolumeData(volumeDataPoints)
-    
-    // Transaction data
-    setTransactionData(volumeDataPoints.map(point => ({
-      name: point.name,
-      buys: point.buys,
-      sells: point.sells,
-      failed: point.failed
-    })))
-    
-    // Profit/Loss data
-    setProfitLossData(volumeDataPoints.map(point => {
-      const profit = (point.buyVolume - point.sellVolume) * (Math.random() * 2 - 0.8)
-      return {
-        name: point.name,
-        profit
-      }
-    }))
-    
-    // Transaction type data
-    setTransactionTypeData([
-      { name: 'Buys', value: buyCount },
-      { name: 'Sells', value: sellCount },
-      { name: 'Failed', value: totalTransactions - successfulTransactions }
-    ])
-    
-    setIsRefreshing(false)
   }
 
-  const refreshData = () => {
+  const refreshData = async () => {
     setIsRefreshing(true)
-    generateMockData()
+    try {
+      await fetchAnalytics()
+      toast.success('Trading analytics refreshed')
+    } catch (error) {
+      toast.error('Failed to refresh trading analytics')
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   const formatCurrency = (value: number) => {
@@ -191,6 +92,32 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
   }
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
+
+  if (!analytics) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-2">
+            <BarChart className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Trading Analytics
+            </h2>
+          </div>
+        </div>
+        
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+        </div>
+      </div>
+    )
+  }
+
+  // Prepare transaction type data for pie chart
+  const transactionTypeData = [
+    { name: 'Buys', value: analytics.buyCount },
+    { name: 'Sells', value: analytics.sellCount },
+    { name: 'Failed', value: analytics.failedTransactions }
+  ]
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -237,10 +164,10 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
             <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Volume</span>
           </div>
           <div className="text-xl font-bold text-blue-900 dark:text-blue-100">
-            {formatCurrency(metrics.totalVolume)} SOL
+            {formatCurrency(analytics.totalVolume)} SOL
           </div>
           <div className="text-xs text-blue-600 dark:text-blue-400">
-            {metrics.totalTransactions} transactions
+            {analytics.totalTransactions} transactions
           </div>
         </div>
 
@@ -250,10 +177,10 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
             <span className="text-sm font-medium text-green-700 dark:text-green-300">Success Rate</span>
           </div>
           <div className="text-xl font-bold text-green-900 dark:text-green-100">
-            {formatPercent(metrics.successRate)}
+            {formatPercent(analytics.successRate)}
           </div>
           <div className="text-xs text-green-600 dark:text-green-400">
-            {metrics.successfulTransactions} successful / {metrics.failedTransactions} failed
+            {analytics.successfulTransactions} successful / {analytics.failedTransactions} failed
           </div>
         </div>
 
@@ -263,14 +190,14 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
             <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Profit/Loss</span>
           </div>
           <div className={`text-xl font-bold ${
-            metrics.profitLoss >= 0 
+            analytics.profitLoss >= 0 
               ? 'text-green-600 dark:text-green-400' 
               : 'text-red-600 dark:text-red-400'
           }`}>
-            {metrics.profitLoss >= 0 ? '+' : ''}{formatCurrency(metrics.profitLoss)} SOL
+            {analytics.profitLoss >= 0 ? '+' : ''}{formatCurrency(analytics.profitLoss)} SOL
           </div>
           <div className="text-xs text-purple-600 dark:text-purple-400">
-            Fees: {formatCurrency(metrics.totalFees)} SOL
+            Fees: {formatCurrency(analytics.totalFees)} SOL
           </div>
         </div>
 
@@ -280,10 +207,10 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
             <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Avg. Slippage</span>
           </div>
           <div className="text-xl font-bold text-orange-900 dark:text-orange-100">
-            {formatPercent(metrics.averageSlippage)}
+            {formatPercent(analytics.averageSlippage)}
           </div>
           <div className="text-xs text-orange-600 dark:text-orange-400">
-            Avg. size: {formatCurrency(metrics.averageTransactionSize)} SOL
+            Avg. size: {formatCurrency(analytics.totalVolume / (analytics.successfulTransactions || 1))} SOL
           </div>
         </div>
       </div>
@@ -301,7 +228,7 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
           
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <RechartsBarChart data={volumeData}>
+              <RechartsBarChart data={analytics.volumeData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="name" tick={{ fill: '#9CA3AF' }} />
                 <YAxis tick={{ fill: '#9CA3AF' }} />
@@ -331,7 +258,7 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
           
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <RechartsBarChart data={transactionData}>
+              <RechartsBarChart data={analytics.transactionData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="name" tick={{ fill: '#9CA3AF' }} />
                 <YAxis tick={{ fill: '#9CA3AF' }} />
@@ -362,7 +289,7 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
           
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <RechartsBarChart data={profitLossData}>
+              <RechartsBarChart data={analytics.profitLossData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="name" tick={{ fill: '#9CA3AF' }} />
                 <YAxis tick={{ fill: '#9CA3AF' }} />
@@ -434,21 +361,21 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Buy/Sell Ratio:</span>
               <span className="text-gray-900 dark:text-white font-medium">
-                {metrics.buyCount}:{metrics.sellCount} ({(metrics.buyCount / (metrics.sellCount || 1)).toFixed(2)})
+                {analytics.buyCount}:{analytics.sellCount} ({(analytics.buyCount / (analytics.sellCount || 1)).toFixed(2)})
               </span>
             </div>
             
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Average Transaction Size:</span>
               <span className="text-gray-900 dark:text-white font-medium">
-                {formatCurrency(metrics.averageTransactionSize)} SOL
+                {formatCurrency(analytics.totalVolume / (analytics.successfulTransactions || 1))} SOL
               </span>
             </div>
             
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Total Fees Paid:</span>
               <span className="text-gray-900 dark:text-white font-medium">
-                {formatCurrency(metrics.totalFees)} SOL
+                {formatCurrency(analytics.totalFees)} SOL
               </span>
             </div>
           </div>
@@ -457,31 +384,31 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Success Rate:</span>
               <span className="text-gray-900 dark:text-white font-medium">
-                {formatPercent(metrics.successRate)}
+                {formatPercent(analytics.successRate)}
               </span>
             </div>
             
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Average Slippage:</span>
               <span className="text-gray-900 dark:text-white font-medium">
-                {formatPercent(metrics.averageSlippage)}
+                {formatPercent(analytics.averageSlippage)}
               </span>
             </div>
             
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Net Profit/Loss:</span>
               <span className={`font-medium ${
-                metrics.profitLoss >= 0 
+                analytics.profitLoss >= 0 
                   ? 'text-green-600 dark:text-green-400' 
                   : 'text-red-600 dark:text-red-400'
               }`}>
                 <span className="flex items-center">
-                  {metrics.profitLoss >= 0 ? (
+                  {analytics.profitLoss >= 0 ? (
                     <ArrowUpRight className="w-4 h-4 mr-1" />
                   ) : (
                     <ArrowDownRight className="w-4 h-4 mr-1" />
                   )}
-                  {metrics.profitLoss >= 0 ? '+' : ''}{formatCurrency(metrics.profitLoss)} SOL
+                  {analytics.profitLoss >= 0 ? '+' : ''}{formatCurrency(analytics.profitLoss)} SOL
                 </span>
               </span>
             </div>
