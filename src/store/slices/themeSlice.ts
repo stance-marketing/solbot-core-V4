@@ -8,30 +8,23 @@ interface ThemeState {
 }
 
 const getInitialTheme = (): Theme => {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('theme') as Theme
-    if (stored && ['light', 'dark', 'system'].includes(stored)) {
-      return stored
-    }
-  }
-  return 'system'
+  // ALWAYS default to dark theme - ignore localStorage to ensure dark is always default
+  return 'dark'
 }
 
 const getIsDark = (theme: Theme): boolean => {
   if (theme === 'system') {
-    return typeof window !== 'undefined' 
+    return typeof window !== 'undefined'
       ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : false
+      : true // Default to dark if no window
   }
   return theme === 'dark'
 }
 
 const initialState: ThemeState = {
-  theme: getInitialTheme(),
-  isDark: false,
+  theme: 'dark', // Force dark theme always
+  isDark: true,  // Force dark mode always
 }
-
-initialState.isDark = getIsDark(initialState.theme)
 
 const themeSlice = createSlice({
   name: 'theme',
@@ -45,9 +38,9 @@ const themeSlice = createSlice({
         localStorage.setItem('theme', action.payload)
         
         if (state.isDark) {
-          document.documentElement.classList.add('dark')
+          document.documentElement.classList.remove('light')
         } else {
-          document.documentElement.classList.remove('dark')
+          document.documentElement.classList.add('light')
         }
       }
     },
@@ -60,9 +53,9 @@ const themeSlice = createSlice({
         localStorage.setItem('theme', newTheme)
         
         if (state.isDark) {
-          document.documentElement.classList.add('dark')
+          document.documentElement.classList.remove('light')
         } else {
-          document.documentElement.classList.remove('dark')
+          document.documentElement.classList.add('light')
         }
       }
     },
@@ -75,9 +68,9 @@ const themeSlice = createSlice({
         }
         
         if (state.isDark) {
-          document.documentElement.classList.add('dark')
+          document.documentElement.classList.remove('light')
         } else {
-          document.documentElement.classList.remove('dark')
+          document.documentElement.classList.add('light')
         }
         
         // Listen for system theme changes
@@ -85,9 +78,9 @@ const themeSlice = createSlice({
           if (state.theme === 'system') {
             state.isDark = e.matches
             if (e.matches) {
-              document.documentElement.classList.add('dark')
+              document.documentElement.classList.remove('light')
             } else {
-              document.documentElement.classList.remove('dark')
+              document.documentElement.classList.add('light')
             }
           }
         }

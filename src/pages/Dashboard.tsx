@@ -101,16 +101,16 @@ const Dashboard: React.FC = () => {
     <div className="space-y-8">
       {/* Header */}
       <motion.div 
-        className="flex items-center justify-between"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <div>
-          <h1 className="text-3xl font-bold text-foreground bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-500 to-secondary">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-500 to-secondary">
             Dashboard
           </h1>
-          <p className="text-muted-foreground text-lg mt-1">
+          <p className="text-muted-foreground text-base sm:text-lg mt-1">
             Monitor your Solana trading bot performance
           </p>
         </div>

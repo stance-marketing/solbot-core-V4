@@ -6,9 +6,11 @@ import tradingReducer from './slices/tradingSlice'
 import walletReducer from './slices/walletSlice'
 import configReducer from './slices/configSlice'
 import loggingReducer from './slices/loggingSlice'
+import authReducer from './slices/authSlice'
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     theme: themeReducer,
     websocket: websocketReducer,
     session: sessionReducer,

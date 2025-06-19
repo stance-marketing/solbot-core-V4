@@ -63,11 +63,11 @@
 
 @layer components {
   .glass-effect {
-    @apply bg-white/10 backdrop-blur-md border border-white/20;
+    @apply bg-gray-900/10 backdrop-blur-md border border-gray-700/20;
   }
   
-  .dark .glass-effect {
-    @apply bg-gray-900/10 backdrop-blur-md border border-gray-700/20;
+  .light .glass-effect {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
   }
   
   .gradient-border {
@@ -132,11 +132,11 @@
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-purple-600 shadow-md hover:shadow-lg shadow-primary/20 hover:shadow-primary/30;
+    @apply bg-primary text-primary-foreground hover:bg-purple-600 shadow-md hover:shadow-lg;
   }
 
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-green-600 shadow-md hover:shadow-lg shadow-secondary/20 hover:shadow-secondary/30;
+    @apply bg-secondary text-secondary-foreground hover:bg-green-600 shadow-md hover:shadow-lg;
   }
 
   .btn-outline {

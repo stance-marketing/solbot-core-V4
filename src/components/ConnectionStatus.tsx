@@ -132,63 +132,66 @@ const ConnectionStatus: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Backend Status */}
-      <motion.div 
-        className={`flex items-center justify-between p-3 rounded-xl border ${config.be.bgColor} ${config.be.borderColor}`}
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
-      >
-        <div className="flex items-center space-x-3">
-          <BeIcon 
-            className={`w-5 h-5 ${config.be.color} ${
-              backendStatus === 'checking' ? 'animate-spin' : 
-              backendStatus === 'connected' ? 'connection-pulse connected' : ''
-            }`} 
-          />
-          <div className="flex-1 min-w-0">
-            <div className={`text-sm font-medium ${config.be.color}`}>
-              {config.be.text}
-            </div>
-            {lastChecked && (
-              <div className="text-xs text-muted-foreground">
-                Last check: {lastChecked.toLocaleTimeString()}
+      {/* Backend Status - Only show if connected or checking */}
+      {(backendStatus === 'connected' || backendStatus === 'checking') && (
+        <motion.div 
+          className={`flex items-center justify-between p-3 rounded-xl border ${config.be.bgColor} ${config.be.borderColor}`}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <div className="flex items-center space-x-3">
+            <BeIcon 
+              className={`w-5 h-5 ${config.be.color} ${
+                backendStatus === 'checking' ? 'animate-spin' : 
+                backendStatus === 'connected' ? 'connection-pulse connected' : ''
+              }`} 
+            />
+            <div className="flex-1 min-w-0">
+              <div className={`text-sm font-medium ${config.be.color}`}>
+                {config.be.text}
               </div>
-            )}
+              {lastChecked && backendStatus === 'connected' && (
+                <div className="text-xs text-muted-foreground">
+                  Last check: {lastChecked.toLocaleTimeString()}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        
-        {backendStatus === 'disconnected' && (
+        </motion.div>
+      )}
+      
+      {/* Subtle Backend Offline Indicator - Only show retry button */}
+      {backendStatus === 'disconnected' && (
+        <motion.div 
+          className="flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
           <button 
             onClick={handleRetryConnection}
             disabled={isCheckingBackend}
-            className="text-xs flex items-center space-x-1 px-2 py-1 rounded-lg bg-muted/30 text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
+            className="text-xs flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-muted/20 text-muted-foreground hover:text-primary hover:bg-muted/30 disabled:opacity-50 transition-colors"
           >
             <RefreshCw className={`w-3 h-3 ${isCheckingBackend ? 'animate-spin' : ''}`} />
-            <span>Retry</span>
+            <span>Reconnect Services</span>
           </button>
-        )}
-      </motion.div>
+        </motion.div>
+      )}
 
-      {/* Error Details */}
-      {lastError && backendStatus === 'disconnected' && (
+      {/* Simplified Error Message - Only show if backend is disconnected for more than 1 minute */}
+      {lastError && backendStatus === 'disconnected' && lastChecked && 
+       (Date.now() - lastChecked.getTime()) > 60000 && (
         <motion.div 
-          className="flex items-start space-x-3 p-3 rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20"
+          className="flex items-center space-x-2 p-2 rounded-lg border border-orange-200/50 dark:border-orange-800/50 bg-orange-50/50 dark:bg-orange-900/10"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
         >
-          <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-orange-800 dark:text-orange-300">
-              Connection Issue
-            </div>
-            <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-              {lastError}
-            </div>
-            <div className="text-xs text-orange-600 dark:text-orange-400 mt-2 p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg font-mono">
-              npm run start-backend
-            </div>
+          <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
+          <div className="text-xs text-orange-600 dark:text-orange-400">
+            Some features may be limited while reconnecting...
           </div>
         </motion.div>
       )}
