@@ -6,11 +6,57 @@ export interface TokenValidationResult {
   tokenData?: {
     name: string
     symbol: string
+    address: string
     price: string
+    priceUsd: number
     volume24h: string
     priceChange24h: string
+    priceChange24hPercent: number
+    marketCap: string
+    liquidity: string
+    holders: string
+    transactions24h: {
+      buys: number
+      sells: number
+      total: number
+    }
+    pairAddress: string
+    dexId: string
+    chainId: string
+    createdAt: string
+    fdv: string
+    pooledSol: string
+    pooledToken: string
   }
   poolKeys?: any
+}
+
+export interface PoolKeys {
+  id: string
+  baseMint: string
+  quoteMint: string
+  lpMint: string
+  baseDecimals: number
+  quoteDecimals: number
+  lpDecimals: number
+  version: number
+  programId: string
+  authority: string
+  openOrders: string
+  targetOrders: string
+  baseVault: string
+  quoteVault: string
+  withdrawQueue: string
+  lpVault: string
+  marketVersion: number
+  marketProgramId: string
+  marketId: string
+  marketAuthority: string
+  marketBaseVault: string
+  marketQuoteVault: string
+  marketBids: string
+  marketAsks: string
+  marketEventQueue: string
 }
 
 export interface SessionFile {
@@ -92,7 +138,7 @@ class BackendService {
     }
   }
 
-  async getPoolKeys(tokenAddress: string): Promise<any> {
+  async getPoolKeys(tokenAddress: string): Promise<PoolKeys> {
     try {
       const response = await fetch(`${this.baseUrl}/tokens/pool-keys`, {
         method: 'POST',
@@ -103,6 +149,22 @@ class BackendService {
       return await response.json()
     } catch (error) {
       console.error('Error getting pool keys:', error)
+      throw error
+    }
+  }
+
+  async getMarketId(tokenAddress: string): Promise<string> {
+    try {
+      const response = await fetch(`${this.baseUrl}/tokens/market-id`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenAddress })
+      })
+      if (!response.ok) throw new Error('Failed to get market ID')
+      const result = await response.json()
+      return result.marketId
+    } catch (error) {
+      console.error('Error getting market ID:', error)
       throw error
     }
   }

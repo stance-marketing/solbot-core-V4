@@ -5,6 +5,7 @@ import { backendService } from '../../services/backendService'
 import { setCurrentSession, setError } from '../../store/slices/sessionSlice'
 import { setAdminWallet, setTradingWallets } from '../../store/slices/walletSlice'
 import { WalletData } from '../../store/slices/walletSlice'
+import TokenDiscovery from '../tokens/TokenDiscovery'
 import toast from 'react-hot-toast'
 
 interface NewSessionWizardProps {
@@ -15,6 +16,7 @@ interface NewSessionWizardProps {
 interface TokenData {
   name: string
   symbol: string
+  address: string
   price: string
   volume24h: string
   priceChange24h: string
@@ -38,7 +40,7 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
   const [tradingWallets, setTradingWalletsState] = useState<WalletData[]>([])
 
   const steps = [
-    { id: 1, name: 'Token Discovery', description: 'Enter and validate token address' },
+    { id: 1, name: 'Token Discovery', description: 'Validate token and fetch pool data' },
     { id: 2, name: 'Admin Wallet', description: 'Create or import admin wallet' },
     { id: 3, name: 'Wallet Setup', description: 'Configure trading wallets' },
     { id: 4, name: 'Funding', description: 'Distribute SOL to wallets' },
@@ -65,37 +67,11 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
     onClose()
   }
 
-  const validateTokenAddress = async () => {
-    if (!tokenAddress.trim()) {
-      setErrorState('Please enter a token address')
-      return false
-    }
-
-    setIsLoading(true)
+  const handleTokenValidated = (tokenData: any, poolKeys: any) => {
+    setTokenData(tokenData)
+    setTokenAddress(tokenData.address)
+    setPoolKeys(poolKeys)
     setErrorState(null)
-
-    try {
-      // Call your backend token validation
-      const result = await backendService.validateTokenAddress(tokenAddress)
-      
-      if (result.isValid && result.tokenData) {
-        setTokenData(result.tokenData)
-        
-        // Get pool keys from your backend
-        const keys = await backendService.getPoolKeys(tokenAddress)
-        setPoolKeys(keys)
-        
-        return true
-      } else {
-        setErrorState('Invalid token address or token not found')
-        return false
-      }
-    } catch (error) {
-      setErrorState(`Failed to validate token address: ${error.message}`)
-      return false
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   const createAdminWallet = async () => {
@@ -110,10 +86,8 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
           setErrorState('Please enter admin wallet private key')
           return false
         }
-        // Call your backend to import wallet
         wallet = await backendService.importAdminWallet(adminPrivateKey)
       } else {
-        // Call your backend to create new wallet
         wallet = await backendService.createAdminWallet()
       }
       
@@ -137,7 +111,6 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
     setErrorState(null)
 
     try {
-      // Call your backend to generate wallets
       const wallets = await backendService.generateTradingWallets(walletCount)
       setTradingWalletsState(wallets)
       return true
@@ -164,7 +137,6 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
     setErrorState(null)
 
     try {
-      // Call your backend to distribute SOL
       const updatedWallets = await backendService.distributeSol(adminWallet, tradingWallets, solAmount)
       setTradingWalletsState(updatedWallets)
       return true
@@ -198,16 +170,14 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
           privateKey: wallet.privateKey,
           generationTimestamp: wallet.generationTimestamp
         })),
-        tokenAddress,
+        tokenAddress: tokenData.address,
         poolKeys,
         tokenName: tokenData.name,
         timestamp: new Date().toISOString()
       }
 
-      // Call your backend to save session
       const filename = await backendService.saveSession(sessionData)
       
-      // Update Redux store
       dispatch(setCurrentSession(sessionData))
       dispatch(setAdminWallet(adminWallet))
       dispatch(setTradingWallets(tradingWallets))
@@ -226,7 +196,10 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
 
     switch (currentStep) {
       case 1:
-        canProceed = await validateTokenAddress()
+        canProceed = !!(tokenData && poolKeys)
+        if (!canProceed) {
+          setErrorState('Please validate a token and ensure pool keys are fetched')
+        }
         break
       case 2:
         canProceed = await createAdminWallet()
@@ -259,7 +232,7 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
@@ -316,47 +289,32 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Token Discovery
+                  Token Discovery & Validation
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Enter the token address to validate and discover pool information.
+                  Enter a token address to validate and discover pool information.
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Token Address
-                </label>
-                <input
-                  type="text"
-                  value={tokenAddress}
-                  onChange={(e) => setTokenAddress(e.target.value)}
-                  placeholder="Enter Solana token address..."
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-solana-500 focus:border-transparent"
-                />
-              </div>
+              <TokenDiscovery 
+                onTokenValidated={handleTokenValidated}
+                initialAddress={tokenAddress}
+                showFullInterface={false}
+              />
 
-              {tokenData && (
+              {tokenData && poolKeys && (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                   <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
-                    Token Validated Successfully
+                    Token & Pool Validated Successfully
                   </h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-green-600 dark:text-green-400">Name:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.name}</span>
+                      <span className="text-green-600 dark:text-green-400">Token:</span>
+                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.name} ({tokenData.symbol})</span>
                     </div>
                     <div>
-                      <span className="text-green-600 dark:text-green-400">Symbol:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.symbol}</span>
-                    </div>
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">Price:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.price}</span>
-                    </div>
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">24h Volume:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.volume24h}</span>
+                      <span className="text-green-600 dark:text-green-400">Pool:</span>
+                      <span className="ml-2 text-green-800 dark:text-green-300">Raydium V{poolKeys.version}</span>
                     </div>
                   </div>
                 </div>
@@ -532,7 +490,7 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
                     <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                       <p>Name: {tokenData?.name}</p>
                       <p>Symbol: {tokenData?.symbol}</p>
-                      <p className="font-mono text-xs">{tokenAddress}</p>
+                      <p className="font-mono text-xs">{tokenData?.address}</p>
                     </div>
                   </div>
 
