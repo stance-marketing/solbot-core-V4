@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { X, ArrowRight, ArrowLeft, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { X, ArrowRight, ArrowLeft, Check, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react'
 import { backendService } from '../../services/backendService'
 import { setCurrentSession } from '../../store/slices/sessionSlice'
 import { setAdminWallet, setTradingWallets } from '../../store/slices/walletSlice'
@@ -12,7 +12,7 @@ interface MainSessionFlowProps {
   onClose: () => void
 }
 
-// This follows your exact index.ts flow
+// This follows your EXACT index.ts flow
 const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) => {
   const dispatch = useDispatch()
   const [currentStep, setCurrentStep] = useState(1)
@@ -23,20 +23,24 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
   const [tokenAddress, setTokenAddress] = useState('')
   const [tokenData, setTokenData] = useState<any>(null)
   const [poolKeys, setPoolKeys] = useState<any>(null)
+  const [sessionFileName, setSessionFileName] = useState<string>('')
   const [adminWalletOption, setAdminWalletOption] = useState<'create' | 'import'>('create')
   const [adminPrivateKey, setAdminPrivateKey] = useState('')
+  const [showPrivateKey, setShowPrivateKey] = useState(false)
   const [adminWallet, setAdminWalletState] = useState<WalletData | null>(null)
   const [walletCount, setWalletCount] = useState(10)
   const [solAmount, setSolAmount] = useState(1.0)
   const [tradingWallets, setTradingWalletsState] = useState<WalletData[]>([])
+  const [showTokenInfo, setShowTokenInfo] = useState(false)
 
-  // Steps matching your index.ts flow
+  // Steps matching your EXACT index.ts flow
   const steps = [
-    { id: 1, name: 'Token Discovery', description: 'Enter and validate token address' },
-    { id: 2, name: 'Admin Wallet', description: 'Create or import admin wallet' },
-    { id: 3, name: 'Wallet Generation', description: 'Generate trading wallets' },
-    { id: 4, name: 'SOL Distribution', description: 'Distribute SOL to wallets' },
-    { id: 5, name: 'Trading Strategy', description: 'Select trading strategy and start' }
+    { id: 1, name: 'Token Discovery', description: 'Validate token and create session file' },
+    { id: 2, name: 'Admin Wallet', description: 'Create/import admin wallet and update session' },
+    { id: 3, name: 'Wallet Generation', description: 'Generate trading wallets and update session' },
+    { id: 4, name: 'SOL Distribution', description: 'Distribute SOL to trading wallets' },
+    { id: 5, name: 'Token Distribution', description: 'Optional: Distribute tokens to wallets' },
+    { id: 6, name: 'Trading Strategy', description: 'Select strategy and start trading' }
   ]
 
   const resetFlow = () => {
@@ -44,12 +48,15 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     setTokenAddress('')
     setTokenData(null)
     setPoolKeys(null)
+    setSessionFileName('')
     setAdminWalletOption('create')
     setAdminPrivateKey('')
+    setShowPrivateKey(false)
     setAdminWalletState(null)
     setWalletCount(10)
     setSolAmount(1.0)
     setTradingWalletsState([])
+    setShowTokenInfo(false)
     setError(null)
     setIsLoading(false)
   }
@@ -59,8 +66,8 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     onClose()
   }
 
-  // Step 1: Token Discovery (matches your DexScreener integration)
-  const validateTokenAddress = async () => {
+  // Step 1: Token Discovery + Session Creation (matches your exact flow)
+  const validateTokenAndCreateSession = async () => {
     if (!tokenAddress.trim()) {
       setError('Please enter a token address')
       return false
@@ -70,30 +77,57 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     setError(null)
 
     try {
+      // 1. Validate token using DexScreener (your getDexscreenerData function)
       const result = await backendService.validateTokenAddress(tokenAddress)
       
-      if (result.isValid && result.tokenData) {
-        setTokenData(result.tokenData)
-        
-        // Get pool keys using your getPoolKeysForTokenAddress function
-        const keys = await backendService.getPoolKeys(tokenAddress)
-        setPoolKeys(keys)
-        
-        return true
-      } else {
+      if (!result.isValid || !result.tokenData) {
         setError('Invalid token address or token not found')
         return false
       }
+
+      setTokenData(result.tokenData)
+
+      // 2. Get pool keys (your getPoolKeysForTokenAddress function)
+      const keys = await backendService.getPoolKeys(tokenAddress)
+      if (!keys) {
+        setError('Pool keys not found for this token')
+        return false
+      }
+      setPoolKeys(keys)
+
+      // 3. Create session file immediately with placeholder admin (your exact flow)
+      const timestamp = new Date().toISOString()
+      const fileName = `${result.tokenData.name}_${new Date().toLocaleDateString().replace(/\//g, '.')}_${new Date().toLocaleTimeString().replace(/:/g, '.')}_session.json`
+      
+      const initialSessionData = {
+        admin: {
+          number: 'to be created',
+          address: 'to be created',
+          privateKey: 'to be created'
+        },
+        wallets: [],
+        tokenAddress,
+        poolKeys: keys,
+        tokenName: result.tokenData.name,
+        timestamp
+      }
+
+      // Save initial session (your saveSession function)
+      await backendService.saveSession(initialSessionData)
+      setSessionFileName(fileName)
+      
+      toast.success(`Session file created: ${fileName}`)
+      return true
     } catch (error) {
-      setError(`Failed to validate token address: ${error.message}`)
+      setError(`Failed to validate token and create session: ${error.message}`)
       return false
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Step 2: Admin Wallet (matches your WalletWithNumber creation)
-  const createAdminWallet = async () => {
+  // Step 2: Admin Wallet + Session Update (matches your exact flow)
+  const createAdminWalletAndUpdateSession = async () => {
     setIsLoading(true)
     setError(null)
 
@@ -105,12 +139,31 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
           setError('Please enter admin wallet private key')
           return false
         }
+        // Your createWalletWithNumber function for import
         wallet = await backendService.importAdminWallet(adminPrivateKey)
       } else {
+        // Your new WalletWithNumber() constructor
         wallet = await backendService.createAdminWallet()
       }
       
       setAdminWalletState(wallet)
+
+      // Update session file with admin wallet (your saveSession function)
+      const sessionData = {
+        admin: {
+          number: wallet.number,
+          address: wallet.publicKey,
+          privateKey: wallet.privateKey
+        },
+        wallets: [],
+        tokenAddress,
+        poolKeys,
+        tokenName: tokenData.name,
+        timestamp: new Date().toISOString()
+      }
+
+      await backendService.saveSession(sessionData)
+      toast.success('Session updated with admin wallet details')
       return true
     } catch (error) {
       setError(`Failed to create admin wallet: ${error.message}`)
@@ -120,8 +173,8 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     }
   }
 
-  // Step 3: Wallet Generation (matches your wallet generation logic)
-  const generateTradingWallets = async () => {
+  // Step 3: Wallet Generation + Session Update (matches your exact flow)
+  const generateWalletsAndUpdateSession = async () => {
     if (walletCount < 1 || walletCount > 100) {
       setError('Wallet count must be between 1 and 100')
       return false
@@ -131,8 +184,14 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     setError(null)
 
     try {
+      // Generate wallets (your Array.from({ length: numWallets }, () => new WalletWithNumber()))
       const wallets = await backendService.generateTradingWallets(walletCount)
       setTradingWalletsState(wallets)
+
+      // Update session file with wallets (your appendWalletsToSession function)
+      await backendService.appendWalletsToSession(wallets, sessionFileName)
+      
+      toast.success(`Generated ${wallets.length} wallets and updated session`)
       return true
     } catch (error) {
       setError(`Failed to generate trading wallets: ${error.message}`)
@@ -143,7 +202,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
   }
 
   // Step 4: SOL Distribution (matches your distributeSol function)
-  const distributeFunds = async () => {
+  const distributeSolToWallets = async () => {
     if (!adminWallet || tradingWallets.length === 0) {
       setError('Admin wallet and trading wallets are required')
       return false
@@ -158,8 +217,11 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     setError(null)
 
     try {
-      const updatedWallets = await backendService.distributeSol(adminWallet, tradingWallets, solAmount)
-      setTradingWalletsState(updatedWallets)
+      // Your distributeSol function
+      const { successWallets } = await backendService.distributeSol(adminWallet, tradingWallets, solAmount)
+      setTradingWalletsState(successWallets)
+      
+      toast.success(`Successfully distributed SOL to ${successWallets.length} wallets`)
       return true
     } catch (error) {
       setError(`Failed to distribute SOL to wallets: ${error.message}`)
@@ -169,8 +231,40 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     }
   }
 
-  // Step 5: Start Trading (matches your dynamicTrade function)
-  const startTrading = async (strategy: string) => {
+  // Step 5: Token Distribution (optional, matches your flow)
+  const distributeTokensToWallets = async () => {
+    if (!adminWallet || tradingWallets.length === 0) {
+      setError('Admin wallet and trading wallets are required')
+      return false
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      // Check if admin has tokens first (your getTokenBalance function)
+      const adminTokenBalance = await backendService.getAdminTokenBalance(adminWallet, tokenAddress)
+      
+      if (adminTokenBalance > 0) {
+        // Your distributeTokens function
+        const amountPerWallet = adminTokenBalance / tradingWallets.length
+        await backendService.distributeTokens(adminWallet, tradingWallets, tokenAddress, amountPerWallet)
+        toast.success('Tokens distributed to wallets')
+      } else {
+        toast.info('Admin wallet has 0 tokens - skipping token distribution')
+      }
+      
+      return true
+    } catch (error) {
+      setError(`Failed to distribute tokens: ${error.message}`)
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Step 6: Start Trading (matches your dynamicTrade function)
+  const startTradingWithStrategy = async (strategy: string) => {
     if (!tokenData || !adminWallet || tradingWallets.length === 0 || !poolKeys) {
       setError('All steps must be completed')
       return
@@ -198,9 +292,6 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
         timestamp: new Date().toISOString()
       }
 
-      // Save session using your saveSession function
-      const filename = await backendService.saveSession(sessionData)
-      
       // Start trading using your dynamicTrade function
       await backendService.startTrading(strategy, sessionData)
       
@@ -209,7 +300,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
       dispatch(setAdminWallet(adminWallet))
       dispatch(setTradingWallets(tradingWallets))
 
-      toast.success(`Trading started with strategy: ${strategy}`)
+      toast.success(`Trading initiated with strategy: ${strategy}`)
       handleClose()
     } catch (error) {
       setError(`Failed to start trading: ${error.message}`)
@@ -223,19 +314,22 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
 
     switch (currentStep) {
       case 1:
-        canProceed = await validateTokenAddress()
+        canProceed = await validateTokenAndCreateSession()
         break
       case 2:
-        canProceed = await createAdminWallet()
+        canProceed = await createAdminWalletAndUpdateSession()
         break
       case 3:
-        canProceed = await generateTradingWallets()
+        canProceed = await generateWalletsAndUpdateSession()
         break
       case 4:
-        canProceed = await distributeFunds()
+        canProceed = await distributeSolToWallets()
         break
       case 5:
-        // This step handles strategy selection and trading start
+        canProceed = await distributeTokensToWallets()
+        break
+      case 6:
+        // This step handles strategy selection
         return
     }
 
@@ -256,7 +350,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
@@ -266,6 +360,11 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               Step {currentStep} of {steps.length}: {steps[currentStep - 1].name}
             </p>
+            {sessionFileName && (
+              <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                Session: {sessionFileName}
+              </p>
+            )}
           </div>
           <button
             onClick={handleClose}
@@ -290,7 +389,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                   {currentStep > step.id ? <Check className="w-4 h-4" /> : step.id}
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-12 h-1 mx-2 ${
+                  <div className={`w-8 h-1 mx-1 ${
                     currentStep > step.id ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
                   }`} />
                 )}
@@ -308,15 +407,15 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
             </div>
           )}
 
-          {/* Step 1: Token Discovery */}
+          {/* Step 1: Token Discovery + Session Creation */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Token Discovery
+                  Token Discovery & Session Creation
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Enter the token address to validate and discover pool information.
+                  Enter the token address to validate, fetch pool keys, and create the session file.
                 </p>
               </div>
 
@@ -335,9 +434,18 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
 
               {tokenData && poolKeys && (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
-                    Token & Pool Validated Successfully
-                  </h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-green-800 dark:text-green-300">
+                      Token & Pool Validated Successfully
+                    </h4>
+                    <button
+                      onClick={() => setShowTokenInfo(!showTokenInfo)}
+                      className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
+                    >
+                      {showTokenInfo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-green-600 dark:text-green-400">Name:</span>
@@ -348,28 +456,51 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                       <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.symbol}</span>
                     </div>
                     <div>
-                      <span className="text-green-600 dark:text-green-400">Price:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.price}</span>
+                      <span className="text-green-600 dark:text-green-400">Pool:</span>
+                      <span className="ml-2 text-green-800 dark:text-green-300">✓ Found</span>
                     </div>
                     <div>
-                      <span className="text-green-600 dark:text-green-400">Pool Found:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">✓ Ready for Trading</span>
+                      <span className="text-green-600 dark:text-green-400">Session:</span>
+                      <span className="ml-2 text-green-800 dark:text-green-300">✓ Created</span>
                     </div>
                   </div>
+
+                  {showTokenInfo && (
+                    <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-green-600 dark:text-green-400">Price:</span>
+                          <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.price}</span>
+                        </div>
+                        <div>
+                          <span className="text-green-600 dark:text-green-400">24h Volume:</span>
+                          <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.volume?.h24}</span>
+                        </div>
+                        <div>
+                          <span className="text-green-600 dark:text-green-400">24h Change:</span>
+                          <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.priceChange?.h24}%</span>
+                        </div>
+                        <div>
+                          <span className="text-green-600 dark:text-green-400">24h Buys:</span>
+                          <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.txns?.h24?.buys}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Step 2: Admin Wallet */}
+          {/* Step 2: Admin Wallet + Session Update */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Admin Wallet Setup
+                  Admin Wallet Setup & Session Update
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Create a new admin wallet or import an existing one.
+                  Create a new admin wallet or import an existing one, then update the session file.
                 </p>
               </div>
 
@@ -404,38 +535,50 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Private Key
                   </label>
-                  <input
-                    type="password"
-                    value={adminPrivateKey}
-                    onChange={(e) => setAdminPrivateKey(e.target.value)}
-                    placeholder="Enter admin wallet private key..."
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-solana-500 focus:border-transparent"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPrivateKey ? "text" : "password"}
+                      value={adminPrivateKey}
+                      onChange={(e) => setAdminPrivateKey(e.target.value)}
+                      placeholder="Enter admin wallet private key..."
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-solana-500 focus:border-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPrivateKey(!showPrivateKey)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      {showPrivateKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
               )}
 
               {adminWallet && (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                   <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
-                    Admin Wallet Ready
+                    Admin Wallet Ready & Session Updated
                   </h4>
                   <p className="text-sm text-green-600 dark:text-green-400 font-mono">
                     {adminWallet.publicKey}
+                  </p>
+                  <p className="text-xs text-green-500 dark:text-green-400 mt-1">
+                    Deposit funds to this wallet and press Next to continue
                   </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* Step 3: Wallet Generation */}
+          {/* Step 3: Wallet Generation + Session Update */}
           {currentStep === 3 && (
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Trading Wallet Generation
+                  Trading Wallet Generation & Session Update
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Configure the number of trading wallets to generate.
+                  Generate trading wallets and update the session file.
                 </p>
               </div>
 
@@ -456,10 +599,10 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
               {tradingWallets.length > 0 && (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                   <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
-                    {tradingWallets.length} Trading Wallets Generated
+                    {tradingWallets.length} Trading Wallets Generated & Session Updated
                   </h4>
                   <p className="text-sm text-green-600 dark:text-green-400">
-                    Wallets are ready for funding in the next step.
+                    Wallets are ready for SOL distribution in the next step.
                   </p>
                 </div>
               )}
@@ -474,13 +617,13 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                   SOL Distribution
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Specify the total amount of SOL to distribute among trading wallets.
+                  Distribute SOL from admin wallet to trading wallets.
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Total SOL Amount
+                  Total SOL Amount to Distribute
                 </label>
                 <input
                   type="number"
@@ -508,21 +651,45 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
             </div>
           )}
 
-          {/* Step 5: Trading Strategy */}
+          {/* Step 5: Token Distribution (Optional) */}
           {currentStep === 5 && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Token Distribution (Optional)
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  If admin wallet has tokens, they will be distributed to trading wallets.
+                </p>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">
+                  Automatic Token Distribution
+                </h4>
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  The system will check if your admin wallet has any {tokenData?.symbol} tokens and distribute them automatically.
+                  If no tokens are found, this step will be skipped.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 6: Trading Strategy */}
+          {currentStep === 6 && (
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   Trading Strategy Selection
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Choose your trading strategy and start automated trading.
+                  Choose your trading strategy to start automated trading.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
-                  onClick={() => startTrading('INCREASE_MAKERS_VOLUME')}
+                  onClick={() => startTradingWithStrategy('INCREASE_MAKERS_VOLUME')}
                   disabled={isLoading}
                   className="p-6 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-left hover:border-solana-500 hover:bg-solana-50 dark:hover:bg-solana-900/20 transition-colors disabled:opacity-50"
                 >
@@ -535,7 +702,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                 </button>
 
                 <button
-                  onClick={() => startTrading('INCREASE_VOLUME_ONLY')}
+                  onClick={() => startTradingWithStrategy('INCREASE_VOLUME_ONLY')}
                   disabled={isLoading}
                   className="p-6 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-left hover:border-solana-500 hover:bg-solana-50 dark:hover:bg-solana-900/20 transition-colors disabled:opacity-50"
                 >
@@ -551,7 +718,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
               {/* Session Summary */}
               <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">
-                  Session Summary
+                  Final Session Summary
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
@@ -567,8 +734,8 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                     <span className="ml-2 text-gray-900 dark:text-white">{solAmount} SOL</span>
                   </div>
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">SOL per wallet:</span>
-                    <span className="ml-2 text-gray-900 dark:text-white">{(solAmount / walletCount).toFixed(6)} SOL</span>
+                    <span className="text-gray-600 dark:text-gray-400">Session File:</span>
+                    <span className="ml-2 text-gray-900 dark:text-white">{sessionFileName}</span>
                   </div>
                 </div>
               </div>
@@ -577,7 +744,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
         </div>
 
         {/* Footer */}
-        {currentStep < 5 && (
+        {currentStep < 6 && (
           <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={handleBack}

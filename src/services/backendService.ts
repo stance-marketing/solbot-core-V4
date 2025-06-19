@@ -45,6 +45,7 @@ class BackendService {
     return await response.json()
   }
 
+  // Maps to your saveSession function in utility.ts
   async saveSession(sessionData: SessionData): Promise<string> {
     const response = await fetch(`${this.baseUrl}/sessions`, {
       method: 'POST',
@@ -54,6 +55,16 @@ class BackendService {
     if (!response.ok) throw new Error('Failed to save session')
     const result = await response.json()
     return result.filename
+  }
+
+  // Maps to your appendWalletsToSession function in utility.ts
+  async appendWalletsToSession(wallets: WalletData[], sessionFileName: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/sessions/append-wallets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallets, sessionFileName })
+    })
+    if (!response.ok) throw new Error('Failed to append wallets to session')
   }
 
   async deleteSession(filename: string): Promise<void> {
@@ -74,6 +85,7 @@ class BackendService {
     return await response.json()
   }
 
+  // Maps to your getPoolKeysForTokenAddress function in pool-keys.ts
   async getPoolKeys(tokenAddress: string): Promise<any> {
     const response = await fetch(`${this.baseUrl}/tokens/pool-keys`, {
       method: 'POST',
@@ -84,6 +96,7 @@ class BackendService {
     return await response.json()
   }
 
+  // Maps to your getMarketIdForTokenAddress function in pool-keys.ts
   async getMarketId(tokenAddress: string): Promise<string> {
     const response = await fetch(`${this.baseUrl}/tokens/market-id`, {
       method: 'POST',
@@ -104,6 +117,7 @@ class BackendService {
     return await response.json()
   }
 
+  // Maps to your createWalletWithNumber function in utility.ts
   async importAdminWallet(privateKey: string): Promise<WalletData> {
     const response = await fetch(`${this.baseUrl}/wallets/admin/import`, {
       method: 'POST',
@@ -114,6 +128,7 @@ class BackendService {
     return await response.json()
   }
 
+  // Maps to your Array.from({ length: numWallets }, () => new WalletWithNumber())
   async generateTradingWallets(count: number): Promise<WalletData[]> {
     const response = await fetch(`${this.baseUrl}/wallets/trading`, {
       method: 'POST',
@@ -124,6 +139,7 @@ class BackendService {
     return await response.json()
   }
 
+  // Maps to your getSolBalance and getTokenBalance functions
   async getWalletBalances(wallets: WalletData[]): Promise<WalletData[]> {
     const response = await fetch(`${this.baseUrl}/wallets/balances`, {
       method: 'POST',
@@ -134,8 +150,20 @@ class BackendService {
     return await response.json()
   }
 
-  // Distribution - Maps to your distributeSol and distributeTokens functions
-  async distributeSol(adminWallet: WalletData, tradingWallets: WalletData[], totalAmount: number): Promise<WalletData[]> {
+  // Maps to your getTokenBalance function for admin wallet
+  async getAdminTokenBalance(adminWallet: WalletData, tokenAddress: string): Promise<number> {
+    const response = await fetch(`${this.baseUrl}/wallets/admin/token-balance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminWallet, tokenAddress })
+    })
+    if (!response.ok) throw new Error('Failed to get admin token balance')
+    const result = await response.json()
+    return result.balance
+  }
+
+  // Distribution - Maps to your distributeSol function in utility.ts
+  async distributeSol(adminWallet: WalletData, tradingWallets: WalletData[], totalAmount: number): Promise<{ successWallets: WalletData[] }> {
     const response = await fetch(`${this.baseUrl}/distribution/sol`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -145,17 +173,18 @@ class BackendService {
     return await response.json()
   }
 
-  async distributeTokens(adminWallet: WalletData, tradingWallets: WalletData[], tokenAddress: string, totalAmount: number): Promise<WalletData[]> {
+  // Maps to your distributeTokens function in utility.ts
+  async distributeTokens(adminWallet: WalletData, tradingWallets: WalletData[], tokenAddress: string, amountPerWallet: number): Promise<WalletData[]> {
     const response = await fetch(`${this.baseUrl}/distribution/tokens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adminWallet, tradingWallets, tokenAddress, totalAmount })
+      body: JSON.stringify({ adminWallet, tradingWallets, tokenAddress, amountPerWallet })
     })
     if (!response.ok) throw new Error('Failed to distribute tokens')
     return await response.json()
   }
 
-  // Trading - Maps to your dynamicTrade function
+  // Trading - Maps to your dynamicTrade function in dynamicTrade.ts
   async startTrading(strategy: string, sessionData: SessionData): Promise<void> {
     const response = await fetch(`${this.baseUrl}/trading/start`, {
       method: 'POST',
@@ -196,7 +225,7 @@ class BackendService {
     if (!response.ok) throw new Error('Failed to restart from point')
   }
 
-  // Cleanup - Maps to your closeTokenAccountsAndSendBalance function
+  // Cleanup - Maps to your closeTokenAccountsAndSendBalance function in addedOptions.ts
   async closeTokenAccountsAndSendBalance(sessionData: SessionData): Promise<void> {
     const response = await fetch(`${this.baseUrl}/cleanup/close-accounts`, {
       method: 'POST',
@@ -206,7 +235,7 @@ class BackendService {
     if (!response.ok) throw new Error('Failed to close token accounts')
   }
 
-  // Environment File Generation - Maps to your updateEnvFile function
+  // Environment File Generation - Maps to your updateEnvFile function in utility.ts
   async generateEnvFile(sessionData: SessionData): Promise<string> {
     const response = await fetch(`${this.baseUrl}/sessions/export-env`, {
       method: 'POST',

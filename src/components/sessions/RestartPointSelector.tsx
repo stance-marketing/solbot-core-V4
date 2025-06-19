@@ -11,7 +11,7 @@ interface RestartPointSelectorProps {
   sessionFilename: string
 }
 
-// These match your exact restart points from index.ts
+// These match your EXACT restart points from index.ts
 interface RestartPoint {
   id: number
   name: string
@@ -52,7 +52,7 @@ const RESTART_POINTS: RestartPoint[] = [
   },
   {
     id: 6,
-    name: 'Close Token Account & Send Balance',
+    name: 'Close Token Account & Send Balance to Admin',
     description: 'Clean up and consolidate all balances',
     available: true
   }
@@ -78,6 +78,7 @@ const RestartPointSelector: React.FC<RestartPointSelectorProps> = ({
     
     try {
       // Call your backend restart function with the selected point
+      // This maps to your exact restart logic in index.ts
       await backendService.restartFromPoint(selectedPoint, currentSession)
       
       const pointName = RESTART_POINTS.find(p => p.id === selectedPoint)?.name
@@ -132,7 +133,7 @@ const RestartPointSelector: React.FC<RestartPointSelectorProps> = ({
                 <div className="col-span-2">
                   <span className="text-blue-600 dark:text-blue-400">Admin:</span>
                   <span className="ml-2 text-blue-800 dark:text-blue-300 font-mono text-xs">
-                    {currentSession.admin.address}
+                    {currentSession.admin.address.slice(0, 8)}...{currentSession.admin.address.slice(-8)}
                   </span>
                 </div>
               </div>
@@ -200,7 +201,7 @@ const RestartPointSelector: React.FC<RestartPointSelectorProps> = ({
                     Important Notice
                   </h4>
                   <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
-                    Restarting from this point will execute the corresponding backend function. 
+                    Restarting from this point will execute the corresponding backend function from your index.ts file. 
                     Make sure you have the necessary funds and configurations in place.
                   </p>
                 </div>
