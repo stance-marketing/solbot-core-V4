@@ -5,6 +5,7 @@ import sessionReducer from './slices/sessionSlice'
 import tradingReducer from './slices/tradingSlice'
 import walletReducer from './slices/walletSlice'
 import configReducer from './slices/configSlice'
+import loggingReducer from './slices/loggingSlice'
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     trading: tradingReducer,
     wallet: walletReducer,
     config: configReducer,
+    logging: loggingReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -8,7 +8,8 @@ import {
   Wallet, 
   Settings,
   Activity,
-  Zap
+  Zap,
+  Terminal
 } from 'lucide-react'
 import { RootState } from '../store/store'
 import ConnectionStatus from './ConnectionStatus'
@@ -18,6 +19,7 @@ const navigation = [
   { name: 'Sessions', href: '/sessions', icon: FolderOpen },
   { name: 'Trading', href: '/trading', icon: TrendingUp },
   { name: 'Wallets', href: '/wallets', icon: Wallet },
+  { name: 'Monitoring', href: '/monitoring', icon: Terminal },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 

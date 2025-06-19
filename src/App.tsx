@@ -7,8 +7,10 @@ import Sessions from './pages/Sessions'
 import Trading from './pages/Trading'
 import Wallets from './pages/Wallets'
 import Settings from './pages/Settings'
+import Monitoring from './pages/Monitoring'
 import { initializeWebSocket } from './store/slices/websocketSlice'
 import { AppDispatch } from './store/store'
+import { systemLogger } from './services/loggingService'
 
 function App() {
   const dispatch = useDispatch<AppDispatch>()
@@ -16,6 +18,13 @@ function App() {
   useEffect(() => {
     // Initialize WebSocket connection
     dispatch(initializeWebSocket())
+    
+    // Log application start
+    systemLogger.info('Application started')
+    
+    return () => {
+      systemLogger.info('Application shutting down')
+    }
   }, [dispatch])
 
   return (
@@ -26,6 +35,7 @@ function App() {
         <Route path="/trading" element={<Trading />} />
         <Route path="/wallets" element={<Wallets />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/monitoring" element={<Monitoring />} />
       </Routes>
     </Layout>
   )
