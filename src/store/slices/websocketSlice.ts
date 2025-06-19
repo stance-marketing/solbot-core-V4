@@ -28,7 +28,7 @@ const initialState: WebSocketState = {
   reconnectAttempts: 0,
   maxReconnectAttempts: 5,
   reconnectInterval: 3000,
-  url: 'ws://localhost:8080', // Backend WebSocket URL
+  url: 'wss://shy-yolo-theorem.solana-mainnet.quiknode.pro/1796bb57c2fdd2a536ae9f46f2d0fd57a9f27bc3/', // Updated WebSocket URL
 }
 
 const websocketSlice = createSlice({
@@ -96,13 +96,13 @@ export const initializeWebSocket = () => (dispatch: any, getState: any) => {
       const ws = new WebSocket(websocket.url)
       
       ws.onopen = () => {
-        console.log('WebSocket connected')
+        console.log('WebSocket connected to:', websocket.url)
         dispatch(setConnection(ws))
         dispatch(setStatus('connected'))
         dispatch(resetReconnectAttempts())
         dispatch(addMessage({
           type: 'system',
-          data: { message: 'Connected to backend' }
+          data: { message: 'Connected to Solana RPC WebSocket' }
         }))
       }
       
@@ -128,7 +128,7 @@ export const initializeWebSocket = () => (dispatch: any, getState: any) => {
         dispatch(setStatus('disconnected'))
         dispatch(addMessage({
           type: 'system',
-          data: { message: 'Disconnected from backend', code: event.code, reason: event.reason }
+          data: { message: 'Disconnected from Solana RPC WebSocket', code: event.code, reason: event.reason }
         }))
         
         // Attempt to reconnect

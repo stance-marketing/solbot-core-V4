@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 interface SwapConfig {
   RPC_URL: string
+  WS_URL: string
   WSOL_ADDRESS: string
   RAYDIUM_LIQUIDITY_POOL_V4_ADDRESS: string
   SLIPPAGE_PERCENT: number
@@ -34,7 +35,8 @@ interface ConfigState {
 }
 
 const defaultSwapConfig: SwapConfig = {
-  RPC_URL: "https://serene-green-waterfall.solana-mainnet.quiknode.pro/f8c6f111811d71021ebbda753f89452e6820735a/",
+  RPC_URL: "https://shy-yolo-theorem.solana-mainnet.quiknode.pro/1796bb57c2fdd2a536ae9f46f2d0fd57a9f27bc3/",
+  WS_URL: "wss://shy-yolo-theorem.solana-mainnet.quiknode.pro/1796bb57c2fdd2a536ae9f46f2d0fd57a9f27bc3/",
   WSOL_ADDRESS: "So11111111111111111111111111111111111111112",
   RAYDIUM_LIQUIDITY_POOL_V4_ADDRESS: "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
   SLIPPAGE_PERCENT: 5,
