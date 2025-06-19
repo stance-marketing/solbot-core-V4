@@ -59,31 +59,22 @@ export const RESTART_POINTS: RestartPoint[] = [
 class SessionService {
   private baseUrl = '/api/sessions' // This would connect to your backend
 
-  // Simulate backend calls for now - replace with actual API calls
+  // Call actual backend API to get session files
   async getSessionFiles(): Promise<SessionFile[]> {
-    // This would call your backend to list session files from ./sessions directory
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            filename: 'BONK_12.25.2024_02.30.45pm_session.json',
-            tokenName: 'BONK',
-            timestamp: '12.25.2024_02.30.45pm',
-            walletCount: 10,
-            size: 15420,
-            lastModified: new Date('2024-12-25T14:30:45')
-          },
-          {
-            filename: 'PEPE_12.24.2024_09.15.22am_session.json',
-            tokenName: 'PEPE',
-            timestamp: '12.24.2024_09.15.22am',
-            walletCount: 15,
-            size: 23180,
-            lastModified: new Date('2024-12-24T09:15:22')
-          }
-        ])
-      }, 500)
-    })
+    try {
+      const response = await fetch(`${this.baseUrl}`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch sessions: ${response.statusText}`)
+      }
+      const sessions = await response.json()
+      return sessions.map((session: any) => ({
+        ...session,
+        lastModified: new Date(session.lastModified)
+      }))
+    } catch (error) {
+      console.error('Error fetching session files:', error)
+      throw error
+    }
   }
 
   async loadSession(filename: string): Promise<SessionData> {

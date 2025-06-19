@@ -4,12 +4,15 @@
   "description": "Professional Solana Trading Bot Dashboard",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 3000",
+    "dev": "vite --host 0.0.0.0 --port 12000",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "server": "node server-production.cjs",
     "start": "node server-production.cjs",
-    "start-backend": "node server-production.cjs"
+    "start-backend": "node server-production.cjs",
+    "start-all": "npm run build && concurrently \"npm run start-backend\" \"npm run preview -- --host 0.0.0.0 --port 3000\"",
+    "vercel-build": "npm run build",
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.1",
@@ -40,6 +43,7 @@
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",

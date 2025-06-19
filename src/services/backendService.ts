@@ -31,7 +31,7 @@ export interface SessionFile {
 }
 
 class BackendService {
-  private baseUrl = 'http://localhost:12001/api'
+  private baseUrl = '/api'
 
   private getErrorMessage(error: unknown): string {
     if (error instanceof Error) {
@@ -89,19 +89,13 @@ class BackendService {
   // Session Management - Maps directly to your utility functions
   async getSessionFiles(): Promise<SessionFile[]> {
     try {
-      console.log('🔍 Fetching session files from backend...');
+      const response = await fetch(`${this.baseUrl}/sessions`);
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       
-      const response = await fetch(`${this.baseUrl}/sessions`, {
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      await this.handleResponse(response);
       const files = await response.json();
-      console.log('✅ Session files received:', files.length, 'files');
       
       // Convert lastModified strings to Date objects
       return files.map((file: any) => ({

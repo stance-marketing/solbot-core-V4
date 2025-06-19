@@ -9,10 +9,18 @@ export default defineConfig({
     host: '0.0.0.0',
     strictPort: false,
     cors: true,
+    allowedHosts: ['work-1-achbmftubyetysis.prod-runtime.all-hands.dev', 'work-2-achbmftubyetysis.prod-runtime.all-hands.dev'],
     headers: {
       'X-Frame-Options': 'ALLOWALL',
       'Access-Control-Allow-Origin': '*',
     },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:12001',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   define: {
     // Ensure proper Node.js globals are available
