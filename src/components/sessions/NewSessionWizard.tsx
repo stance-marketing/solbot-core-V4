@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { X, ArrowRight, ArrowLeft, Check, AlertCircle, Loader2, Wallet, DollarSign } from 'lucide-react'
 import { backendService } from '../../services/backendService'
-import { setCurrentSession, setError } from '../../store/slices/sessionSlice'
+import { setCurrentSession } from '../../store/slices/sessionSlice'
 import { setAdminWallet, setTradingWallets } from '../../store/slices/walletSlice'
 import { WalletData } from '../../store/slices/walletSlice'
 import TokenDiscovery from '../tokens/TokenDiscovery'
@@ -94,7 +94,7 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
       setAdminWalletState(wallet)
       return true
     } catch (error) {
-      setErrorState(`Failed to create admin wallet: ${error.message}`)
+      setErrorState(`Failed to create admin wallet: ${error instanceof Error ? error.message : String(error)}`)
       return false
     } finally {
       setIsLoading(false)
@@ -115,7 +115,7 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
       setTradingWalletsState(wallets)
       return true
     } catch (error) {
-      setErrorState(`Failed to generate trading wallets: ${error.message}`)
+      setErrorState(`Failed to generate trading wallets: ${error instanceof Error ? error.message : String(error)}`)
       return false
     } finally {
       setIsLoading(false)
@@ -141,7 +141,7 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
       setTradingWalletsState(updatedWallets)
       return true
     } catch (error) {
-      setErrorState(`Failed to distribute SOL to wallets: ${error.message}`)
+      setErrorState(`Failed to distribute SOL to wallets: ${error instanceof Error ? error.message : String(error)}`)
       return false
     } finally {
       setIsLoading(false)
@@ -158,6 +158,7 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
     setErrorState(null)
 
     try {
+      // Session is automatically saved by backend at each step, just update Redux state
       const sessionData = {
         admin: {
           number: adminWallet.number,
@@ -175,17 +176,15 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
         tokenName: tokenData.name,
         timestamp: new Date().toISOString()
       }
-
-      const filename = await backendService.saveSession(sessionData)
       
       dispatch(setCurrentSession(sessionData))
       dispatch(setAdminWallet(adminWallet))
       dispatch(setTradingWallets(tradingWallets))
 
-      toast.success(`Session created successfully: ${filename}`)
+      toast.success(`Session created successfully! Session file was automatically saved.`)
       handleClose()
     } catch (error) {
-      setErrorState(`Failed to create session: ${error.message}`)
+      setErrorState(`Failed to create session: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoading(false)
     }

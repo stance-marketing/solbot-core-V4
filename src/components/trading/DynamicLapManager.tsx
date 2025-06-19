@@ -178,14 +178,14 @@ const DynamicLapManager: React.FC<DynamicLapManagerProps> = ({
         walletsGenerated: 0,
         distributionSuccess: false,
         status: 'failed',
-        errorMessage: error.message
+        errorMessage: error instanceof Error ? error.message : String(error)
       }
 
       setLapResults(prev => [...prev, failedLapResult])
-      dispatch(failLap(error.message))
+      dispatch(failLap(error instanceof Error ? error.message : String(error)))
       onLapComplete(failedLapResult)
 
-      toast.error(`Lap ${lapNumber} failed: ${error.message}`)
+      toast.error(`Lap ${lapNumber} failed: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsProcessingLap(false)
       setCurrentPhase('')

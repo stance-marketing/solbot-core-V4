@@ -81,7 +81,7 @@ const TokenDiscovery: React.FC<TokenDiscoveryProps> = ({
 
     } catch (error) {
       console.error('❌ Token validation error:', error)
-      const errorMessage = error.message || 'Failed to validate token'
+      const errorMessage = error instanceof Error ? error.message : String(error) || 'Failed to validate token'
       setError(errorMessage)
       toast.error(errorMessage)
     } finally {
@@ -102,25 +102,31 @@ const TokenDiscovery: React.FC<TokenDiscoveryProps> = ({
         <label className="block text-sm font-medium text-foreground mb-2">
           Token Address
         </label>
-        <div className="relative">
+        <div className="flex space-x-3">
           <input
             type="text"
             value={tokenAddress}
             onChange={(e) => setTokenAddress(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Enter token address to start trading..."
-            className="w-full px-4 py-3 pr-12 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="flex-1 px-4 py-3 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
             disabled={isValidating}
           />
           <button
             onClick={validateToken}
             disabled={isValidating || !tokenAddress.trim()}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
           >
             {isValidating ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Validating...</span>
+              </>
             ) : (
-              <Search className="w-5 h-5" />
+              <>
+                <CheckCircle className="w-4 h-4" />
+                <span>Validate Token</span>
+              </>
             )}
           </button>
         </div>

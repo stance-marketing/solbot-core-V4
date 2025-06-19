@@ -37,7 +37,7 @@ const EnvFileManager: React.FC = () => {
       setEnvContent(content)
       toast.success('Environment file generated')
     } catch (error) {
-      toast.error(`Failed to generate environment file: ${error.message}`)
+      toast.error(`Failed to generate environment file: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsGenerating(false)
     }
@@ -90,7 +90,7 @@ const EnvFileManager: React.FC = () => {
         parseEnvFile(content)
         toast.success('Environment file uploaded')
       } catch (error) {
-        toast.error(`Failed to parse environment file: ${error.message}`)
+        toast.error(`Failed to parse environment file: ${error instanceof Error ? error.message : String(error)}`)
       } finally {
         setIsUploading(false)
       }

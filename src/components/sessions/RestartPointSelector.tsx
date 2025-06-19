@@ -85,7 +85,7 @@ const RestartPointSelector: React.FC<RestartPointSelectorProps> = ({
       toast.success(`Restarting from: ${pointName}`)
       onClose()
     } catch (error) {
-      toast.error(`Failed to restart session: ${error.message}`)
+      toast.error(`Failed to restart session: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoading(false)
     }

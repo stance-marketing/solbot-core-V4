@@ -92,11 +92,11 @@ const WalletRegenerationTracker: React.FC<WalletRegenerationTrackerProps> = ({
       console.error('Regeneration failed:', error)
       
       // Mark current phase as failed
-      updatePhaseStatus(currentPhaseIndex, 'failed', 0, error.message)
+      updatePhaseStatus(currentPhaseIndex, 'failed', 0, error instanceof Error ? error.message : String(error))
       
       onRegenerationComplete({
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       })
     } finally {
       setIsRegenerating(false)
@@ -111,7 +111,7 @@ const WalletRegenerationTracker: React.FC<WalletRegenerationTrackerProps> = ({
       await phaseFunction()
       updatePhaseStatus(phaseIndex, 'completed', 100)
     } catch (error) {
-      updatePhaseStatus(phaseIndex, 'failed', 0, error.message)
+      updatePhaseStatus(phaseIndex, 'failed', 0, error instanceof Error ? error.message : String(error))
       throw error
     }
   }

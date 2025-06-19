@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { Toaster } from 'react-hot-toast'
@@ -27,7 +27,7 @@ function App() {
       dispatch(initializeWebSocket())
     } catch (error) {
       console.error("Failed to initialize WebSocket:", error);
-      systemLogger.error('WebSocket initialization failed', 'app', error);
+      systemLogger.error('WebSocket initialization failed', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
     }
     
     // Log application start

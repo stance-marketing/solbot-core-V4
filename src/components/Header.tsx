@@ -6,7 +6,7 @@ import { setTheme, Theme } from '../store/slices/themeSlice'
 
 const Header: React.FC = () => {
   const dispatch = useDispatch()
-  const { theme, isDark } = useSelector((state: RootState) => state.theme)
+  const { theme } = useSelector((state: RootState) => state.theme)
   const { messages } = useSelector((state: RootState) => state.websocket)
   
   const unreadCount = messages.filter(msg => 

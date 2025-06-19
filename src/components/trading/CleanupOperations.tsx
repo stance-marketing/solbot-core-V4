@@ -87,9 +87,9 @@ const CleanupOperations: React.FC = () => {
       setOperationStatus('failed')
       setResults(prev => ({
         ...prev,
-        errors: [...prev.errors, error.message]
+        errors: [...prev.errors, error instanceof Error ? error.message : String(error)]
       }))
-      toast.error(`Cleanup failed: ${error.message}`)
+      toast.error(`Cleanup failed: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoading(false)
     }

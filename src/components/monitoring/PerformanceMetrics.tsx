@@ -112,7 +112,7 @@ const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({
           }
         })
         
-        setMetrics(newMetrics)
+        setMetrics(newMetrics as MetricData[])
         
         // Update history for charts
         const timestamp = new Date()
@@ -388,7 +388,7 @@ const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({
               
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={latencyHistory}>
+                  <RechartsBarChart data={latencyHistory}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                     <XAxis dataKey="name" tick={{ fill: '#9CA3AF' }} />
                     <YAxis tick={{ fill: '#9CA3AF' }} />
@@ -403,7 +403,7 @@ const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({
                       dataKey="Latency" 
                       fill="#10B981"
                     />
-                  </BarChart>
+                  </RechartsBarChart>
                 </ResponsiveContainer>
               </div>
             </div>

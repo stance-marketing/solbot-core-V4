@@ -1,0 +1,73 @@
+{
+  "admin": {
+    "number": 0,
+    "address": "Ea8Gm6NE2oUUUciPWShtMCsDWxAh1C7TzSxAgaxzfKxo",
+    "privateKey": "3uxJtZbx1ms19ssh7apbWfw9rtWfxEvrBLMkZUBYi3eqZct9Dh4EETK5sukTchqN3zoex34bab57VtYrZ1hSGkHy"
+  },
+  "wallets": [
+    {
+      "number": 1,
+      "address": "G7cpwD4MucUgC88FRy94JtUAhkuJyxgBwWx1ym1rS51k",
+      "privateKey": "2pMZ8GocpzJffmQqmj7Y22jeg3J8i5eGTA5HumdcJa42LcBenkw56GkFf8JGcWxJdG4BGaVUKJLCRvTM6pmZ1JxS",
+      "generationTimestamp": "2025-06-19T08:50:53.201Z"
+    },
+    {
+      "number": 2,
+      "address": "GUgytoeupWRdjSuhornd8Zei7YbcqWsHock8EMQfKU6u",
+      "privateKey": "4pqECd3snp5YRu9KsRnig4h3xw7SiLXp4jSxN9KbJB2kmMYdZ5pTmac8CUDXnJuiEGgf3AatqjdPZPPFX9KsX7B7",
+      "generationTimestamp": "2025-06-19T08:50:53.204Z"
+    },
+    {
+      "number": 3,
+      "address": "EteUSLvF3Def2TGxNB5TS4v6K5joDu3qTW5NNfHbjHgZ",
+      "privateKey": "4DZE62iEoVJyFddy2JtQ42CD5Rscb6iwUzLnm6P3DJD8nedfQqHYkC1ZVDu9VRRQ5uQrqFFA3D7h9eSuShY2AAZB",
+      "generationTimestamp": "2025-06-19T08:50:53.205Z"
+    },
+    {
+      "number": 4,
+      "address": "61JbnyskFhMNMdKBsTxRuifEva9PVbxprNFRgNTGbDEr",
+      "privateKey": "4z1QvieZhkSz6C2KsGSEwstywsQkeLYv7k7i65VVEdkoxXtDD28HUyAviVJeNaFoeVxHkUyzg2DkPz3JVNfqRMaA",
+      "generationTimestamp": "2025-06-19T08:50:53.208Z"
+    },
+    {
+      "number": 5,
+      "address": "DQWT85XxKoJ84iV1sMPAM4PBf5pdVkqYwuPmxo6ETZBA",
+      "privateKey": "5Akw5zK4u7TLf2rW1wp76Z31ewmf9dF8q4sNLRqfw6Gxj11UMN8anRUdhAc3SbgG2kmHzxrSVGqwLNeFwnDKXSjv",
+      "generationTimestamp": "2025-06-19T08:50:53.209Z"
+    },
+    {
+      "number": 6,
+      "address": "Ci8piGrZHYkh4DTJDGQTzBJ59zbUJ4yK2jobaa77fdqh",
+      "privateKey": "7Qfo93oMMMiB3BvKeFhz6d8914P3eohUZ1Cv2SWGNA3JiFwLwcbotidqRUquVHRNgVFVRUJr8GJgAkFG3e5KGoq",
+      "generationTimestamp": "2025-06-19T08:50:53.210Z"
+    },
+    {
+      "number": 7,
+      "address": "3RoxAvyCpKvPwykhYaCBSU8A1nc16qD9UD3LoUCQJvA1",
+      "privateKey": "5MkKnLWHEkScddYgaQuYicfm4m3RnhcsP2uQ4zZDd7xdnNdAPjhEqnfBFssT9jxVEBkBc3bw2H6B4CuhUv3uUsth",
+      "generationTimestamp": "2025-06-19T08:50:53.211Z"
+    },
+    {
+      "number": 8,
+      "address": "3hVmBNifbvpAN1MmhLGaRvDXE23rJBxKXHStJAT3CrpK",
+      "privateKey": "4597RE2UUh58gM8KaKg5dxqFYud22xfXPaBErAftRdpytVputWNEp9EJiLkLKg2C4dcUR2YkjS3ycFrTRDUsvgaw",
+      "generationTimestamp": "2025-06-19T08:50:53.212Z"
+    },
+    {
+      "number": 9,
+      "address": "7C353JPZzvjfkG9KudWyK4WtoB2BBtwEtVFRhBbfE7ha",
+      "privateKey": "2MFsKA8J6swQnHGmPNnDYWoA4e2BMfwFfLNwC1KfQgZQQ8b59kpNka2xSrW2pQwFFuJntgec2T8Di6tDbsi7CdgL",
+      "generationTimestamp": "2025-06-19T08:50:53.213Z"
+    },
+    {
+      "number": 10,
+      "address": "Go1RWg45Xdi6fxNuBfdvmppKnNSTntxrMUYJYejJSbHX",
+      "privateKey": "4R1QQEkuK7AQWPLp4JtRhSxBSYJn138iGUf6QSGjMjdFxz6VddgVdnhx5JCaCANCgFYfX5Qc3m2hiCrhKiQij9os",
+      "generationTimestamp": "2025-06-19T08:50:53.214Z"
+    }
+  ],
+  "tokenAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "poolKeys": null,
+  "tokenName": "USD Coin",
+  "timestamp": "06.19.2025_04.49.31am"
+}

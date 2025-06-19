@@ -31,7 +31,14 @@ export interface SessionFile {
 }
 
 class BackendService {
-  private baseUrl = 'http://localhost:3001/api'
+  private baseUrl = 'http://localhost:12001/api'
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return this.getErrorMessage(error);
+    }
+    return String(error);
+  }
 
   private async handleResponse(response: Response) {
     if (!response.ok) {
@@ -83,7 +90,7 @@ class BackendService {
       }));
     } catch (error) {
       console.error('❌ Failed to fetch session files:', error);
-      throw new Error(`Failed to fetch session files: ${error.message}`);
+      throw new Error(`Failed to fetch session files: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -99,7 +106,7 @@ class BackendService {
       return sessionData;
     } catch (error) {
       console.error('❌ Failed to load session:', error);
-      throw new Error(`Failed to load session: ${error.message}`);
+      throw new Error(`Failed to load session: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -119,7 +126,7 @@ class BackendService {
       return result.filename;
     } catch (error) {
       console.error('❌ Failed to save session:', error);
-      throw new Error(`Failed to save session: ${error.message}`);
+      throw new Error(`Failed to save session: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -137,7 +144,7 @@ class BackendService {
       console.log('✅ Wallets appended successfully');
     } catch (error) {
       console.error('❌ Failed to append wallets to session:', error);
-      throw new Error(`Failed to append wallets to session: ${error.message}`);
+      throw new Error(`Failed to append wallets to session: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -152,7 +159,7 @@ class BackendService {
       console.log('✅ Session deleted successfully');
     } catch (error) {
       console.error('❌ Failed to delete session:', error);
-      throw new Error(`Failed to delete session: ${error.message}`);
+      throw new Error(`Failed to delete session: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -180,7 +187,7 @@ class BackendService {
       return result;
     } catch (error) {
       console.error('❌ Failed to validate token:', error);
-      throw new Error(`Failed to validate token: ${error.message}`);
+      throw new Error(`Failed to validate token: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -200,7 +207,7 @@ class BackendService {
       return poolKeys;
     } catch (error) {
       console.error('❌ Failed to get pool keys:', error);
-      throw new Error(`Failed to get pool keys: ${error.message}`);
+      throw new Error(`Failed to get pool keys: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -220,7 +227,7 @@ class BackendService {
       return result.marketId;
     } catch (error) {
       console.error('❌ Failed to get market ID:', error);
-      throw new Error(`Failed to get market ID: ${error.message}`);
+      throw new Error(`Failed to get market ID: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -238,7 +245,7 @@ class BackendService {
       return wallet;
     } catch (error) {
       console.error('❌ Failed to create admin wallet:', error);
-      throw new Error(`Failed to create admin wallet: ${error.message}`);
+      throw new Error(`Failed to create admin wallet: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -258,7 +265,7 @@ class BackendService {
       return wallet;
     } catch (error) {
       console.error('❌ Failed to import admin wallet:', error);
-      throw new Error(`Failed to import admin wallet: ${error.message}`);
+      throw new Error(`Failed to import admin wallet: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -278,7 +285,7 @@ class BackendService {
       return wallets;
     } catch (error) {
       console.error('❌ Failed to generate trading wallets:', error);
-      throw new Error(`Failed to generate trading wallets: ${error.message}`);
+      throw new Error(`Failed to generate trading wallets: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -298,7 +305,7 @@ class BackendService {
       return updatedWallets;
     } catch (error) {
       console.error('❌ Failed to get wallet balances:', error);
-      throw new Error(`Failed to get wallet balances: ${error.message}`);
+      throw new Error(`Failed to get wallet balances: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -318,7 +325,7 @@ class BackendService {
       return result.balance;
     } catch (error) {
       console.error('❌ Failed to get admin token balance:', error);
-      throw new Error(`Failed to get admin token balance: ${error.message}`);
+      throw new Error(`Failed to get admin token balance: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -338,7 +345,7 @@ class BackendService {
       return Array.isArray(result) ? result : result.successWallets || result;
     } catch (error) {
       console.error('❌ Failed to distribute SOL:', error);
-      throw new Error(`Failed to distribute SOL: ${error.message}`);
+      throw new Error(`Failed to distribute SOL: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -358,7 +365,7 @@ class BackendService {
       return updatedWallets;
     } catch (error) {
       console.error('❌ Failed to distribute tokens:', error);
-      throw new Error(`Failed to distribute tokens: ${error.message}`);
+      throw new Error(`Failed to distribute tokens: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -376,7 +383,7 @@ class BackendService {
       console.log('✅ Trading started successfully');
     } catch (error) {
       console.error('❌ Failed to start trading:', error);
-      throw new Error(`Failed to start trading: ${error.message}`);
+      throw new Error(`Failed to start trading: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -391,7 +398,7 @@ class BackendService {
       console.log('✅ Trading paused');
     } catch (error) {
       console.error('❌ Failed to pause trading:', error);
-      throw new Error(`Failed to pause trading: ${error.message}`);
+      throw new Error(`Failed to pause trading: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -406,7 +413,7 @@ class BackendService {
       console.log('✅ Trading resumed');
     } catch (error) {
       console.error('❌ Failed to resume trading:', error);
-      throw new Error(`Failed to resume trading: ${error.message}`);
+      throw new Error(`Failed to resume trading: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -421,7 +428,7 @@ class BackendService {
       console.log('✅ Trading stopped');
     } catch (error) {
       console.error('❌ Failed to stop trading:', error);
-      throw new Error(`Failed to stop trading: ${error.message}`);
+      throw new Error(`Failed to stop trading: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -439,7 +446,7 @@ class BackendService {
       console.log('✅ Restart initiated successfully');
     } catch (error) {
       console.error('❌ Failed to restart from point:', error);
-      throw new Error(`Failed to restart from point: ${error.message}`);
+      throw new Error(`Failed to restart from point: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -457,7 +464,7 @@ class BackendService {
       console.log('✅ Token accounts closed successfully');
     } catch (error) {
       console.error('❌ Failed to close token accounts:', error);
-      throw new Error(`Failed to close token accounts: ${error.message}`);
+      throw new Error(`Failed to close token accounts: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -477,7 +484,7 @@ class BackendService {
       return envContent;
     } catch (error) {
       console.error('❌ Failed to generate env file:', error);
-      throw new Error(`Failed to generate env file: ${error.message}`);
+      throw new Error(`Failed to generate env file: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -495,7 +502,7 @@ class BackendService {
       console.log('✅ Swap configuration saved');
     } catch (error) {
       console.error('❌ Failed to save swap configuration:', error);
-      throw new Error(`Failed to save swap configuration: ${error.message}`);
+      throw new Error(`Failed to save swap configuration: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -511,7 +518,7 @@ class BackendService {
       return config;
     } catch (error) {
       console.error('❌ Failed to get swap configuration:', error);
-      throw new Error(`Failed to get swap configuration: ${error.message}`);
+      throw new Error(`Failed to get swap configuration: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -551,7 +558,7 @@ class BackendService {
       return await response.json();
     } catch (error) {
       console.error('❌ Health check failed:', error);
-      throw new Error(`Health check failed: ${error.message}`);
+      throw new Error(`Health check failed: ${this.getErrorMessage(error)}`);
     }
   }
 }

@@ -37,7 +37,7 @@ const TradingWalletPanel: React.FC<TradingWalletPanelProps> = ({
       onWalletsGenerated([...tradingWallets, ...wallets])
       toast.success(`Generated ${wallets.length} trading wallets`)
     } catch (error) {
-      toast.error(`Failed to generate wallets: ${error.message}`)
+      toast.error(`Failed to generate wallets: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsGenerating(false)
     }

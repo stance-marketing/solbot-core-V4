@@ -93,7 +93,7 @@ const ErrorMonitor: React.FC<ErrorMonitorProps> = ({
     
     if (searchTerm) {
       filtered = filtered.filter(error => 
-        error.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        error instanceof Error ? error.message : String(error).toLowerCase().includes(searchTerm.toLowerCase()) ||
         error.source.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
@@ -170,7 +170,7 @@ const ErrorMonitor: React.FC<ErrorMonitorProps> = ({
 
   const downloadErrorReport = () => {
     const content = errors.map(error => 
-      `[${new Date(error.timestamp).toISOString()}] [${error.severity.toUpperCase()}] [${error.source}] ${error.message}${error.stack ? '\nStack: ' + error.stack : ''}`
+      `[${new Date(error.timestamp).toISOString()}] [${error.severity.toUpperCase()}] [${error.source}] ${error instanceof Error ? error.message : String(error)}${error.stack ? '\nStack: ' + error.stack : ''}`
     ).join('\n\n')
     
     const blob = new Blob([content], { type: 'text/plain' })
@@ -328,7 +328,7 @@ const ErrorMonitor: React.FC<ErrorMonitorProps> = ({
                   <div>
                     <div className="flex items-center space-x-2">
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {error.message.length > 100 ? error.message.slice(0, 100) + '...' : error.message}
+                        {error instanceof Error ? error.message : String(error).length > 100 ? error instanceof Error ? error.message : String(error).slice(0, 100) + '...' : error instanceof Error ? error.message : String(error)}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${getSeverityColor(error.severity)}`}>
                         {error.severity}

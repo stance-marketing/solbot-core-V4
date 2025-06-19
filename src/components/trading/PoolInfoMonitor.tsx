@@ -5,6 +5,7 @@ import {
   Clock, 
   BarChart3, 
   TrendingUp,
+  TrendingDown,
   DollarSign,
   Coins,
   Activity,

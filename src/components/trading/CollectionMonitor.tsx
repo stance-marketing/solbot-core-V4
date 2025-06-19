@@ -90,7 +90,7 @@ const CollectionMonitor: React.FC<CollectionMonitorProps> = ({
 
       } catch (error) {
         wallet.status = 'failed'
-        wallet.error = error.message
+        wallet.error = error instanceof Error ? error.message : String(error)
       }
 
       // Update progress

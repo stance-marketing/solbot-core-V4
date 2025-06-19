@@ -376,7 +376,7 @@ const TradingAnalytics: React.FC<TradingAnalyticsProps> = ({
                 <Bar 
                   dataKey="profit" 
                   name="Profit/Loss" 
-                  fill={(entry) => entry.profit >= 0 ? '#10B981' : '#EF4444'}
+                  fill="#10B981"
                 />
               </RechartsBarChart>
             </ResponsiveContainer>
