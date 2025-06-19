@@ -280,48 +280,48 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-card rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-2xl font-bold text-foreground">
               Start Trading Session
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-muted-foreground mt-1">
               Step {currentStep} of {steps.length}: {steps[currentStep - 1].name}
             </p>
             {sessionFileName && (
-              <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+              <p className="text-xs text-secondary mt-1">
                 Session: {sessionFileName}
               </p>
             )}
           </div>
           <button
             onClick={handleClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="p-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Progress Bar */}
-        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900">
+        <div className="px-6 py-4 bg-muted/30">
           <div className="flex items-center justify-between">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
                   currentStep > step.id
-                    ? 'bg-green-500 text-white'
+                    ? 'bg-secondary text-secondary-foreground'
                     : currentStep === step.id
-                    ? 'bg-solana-500 text-white'
-                    : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
                 }`}>
                   {currentStep > step.id ? <Check className="w-4 h-4" /> : step.id}
                 </div>
                 {index < steps.length - 1 && (
                   <div className={`w-8 h-1 mx-1 ${
-                    currentStep > step.id ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                    currentStep > step.id ? 'bg-secondary' : 'bg-muted'
                   }`} />
                 )}
               </div>
@@ -332,9 +332,9 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center space-x-2">
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-              <span className="text-red-700 dark:text-red-300">{error}</span>
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              <span className="text-red-500">{error}</span>
             </div>
           )}
 
@@ -342,10 +342,10 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
           {currentStep === 1 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Find Your Token
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   Enter a token address to check if it's available for trading.
                 </p>
               </div>
@@ -362,10 +362,10 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
           {currentStep === 2 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Set Up Admin Wallet
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   This wallet will control your trading session and hold your funds.
                 </p>
               </div>
@@ -375,30 +375,30 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                   onClick={() => setAdminWalletOption('create')}
                   className={`p-4 border-2 rounded-lg text-left transition-colors ${
                     adminWalletOption === 'create'
-                      ? 'border-solana-500 bg-solana-50 dark:bg-solana-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  <h4 className="font-medium text-gray-900 dark:text-white">Create New Wallet</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Generate a fresh wallet for trading</p>
+                  <h4 className="font-medium text-foreground">Create New Wallet</h4>
+                  <p className="text-sm text-muted-foreground">Generate a fresh wallet for trading</p>
                 </button>
 
                 <button
                   onClick={() => setAdminWalletOption('import')}
                   className={`p-4 border-2 rounded-lg text-left transition-colors ${
                     adminWalletOption === 'import'
-                      ? 'border-solana-500 bg-solana-50 dark:bg-solana-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  <h4 className="font-medium text-gray-900 dark:text-white">Import Existing</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Use your existing wallet</p>
+                  <h4 className="font-medium text-foreground">Import Existing</h4>
+                  <p className="text-sm text-muted-foreground">Use your existing wallet</p>
                 </button>
               </div>
 
               {adminWalletOption === 'import' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Private Key
                   </label>
                   <div className="relative">
@@ -407,12 +407,12 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                       value={adminPrivateKey}
                       onChange={(e) => setAdminPrivateKey(e.target.value)}
                       placeholder="Enter your wallet private key..."
-                      className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-solana-500 focus:border-transparent"
+                      className="w-full px-4 py-3 pr-12 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPrivateKey(!showPrivateKey)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
                       {showPrivateKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -421,14 +421,14 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
               )}
 
               {adminWallet && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
+                <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-4">
+                  <h4 className="font-medium text-secondary mb-2">
                     Admin Wallet Ready
                   </h4>
-                  <p className="text-sm text-green-600 dark:text-green-400 font-mono">
+                  <p className="text-sm text-foreground font-mono">
                     {adminWallet.publicKey}
                   </p>
-                  <p className="text-xs text-green-500 dark:text-green-400 mt-1">
+                  <p className="text-xs text-secondary mt-1">
                     ⚠️ Fund this wallet with SOL before proceeding to the next step
                   </p>
                 </div>
@@ -440,16 +440,16 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
           {currentStep === 3 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Generate Trading Wallets
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   These wallets will execute your trading strategy.
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Number of Trading Wallets (1-100)
                 </label>
                 <input
@@ -458,19 +458,19 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                   max="100"
                   value={walletCount}
                   onChange={(e) => setWalletCount(parseInt(e.target.value) || 1)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-solana-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   More wallets = more trading activity but higher SOL requirements
                 </p>
               </div>
 
               {tradingWallets.length > 0 && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
+                <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-4">
+                  <h4 className="font-medium text-secondary mb-2">
                     {tradingWallets.length} Trading Wallets Generated
                   </h4>
-                  <p className="text-sm text-green-600 dark:text-green-400">
+                  <p className="text-sm text-foreground">
                     Ready for SOL distribution in the next step
                   </p>
                 </div>
@@ -482,16 +482,16 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
           {currentStep === 4 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Fund Trading Wallets
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   Distribute SOL from your admin wallet to the trading wallets.
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Total SOL Amount to Distribute
                 </label>
                 <input
@@ -500,19 +500,19 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                   min="0.001"
                   value={solAmount}
                   onChange={(e) => setSolAmount(parseFloat(e.target.value) || 0)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-solana-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Each wallet will receive approximately {(solAmount / walletCount).toFixed(6)} SOL
                 </p>
               </div>
 
               {tradingWallets.some(w => w.solBalance > 0) && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
+                <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-4">
+                  <h4 className="font-medium text-secondary mb-2">
                     SOL Distribution Complete
                   </h4>
-                  <p className="text-sm text-green-600 dark:text-green-400">
+                  <p className="text-sm text-foreground">
                     {tradingWallets.filter(w => w.solBalance > 0).length} wallets funded successfully
                   </p>
                 </div>
@@ -524,19 +524,19 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
           {currentStep === 5 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Token Distribution (Optional)
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   If your admin wallet has {tokenData?.symbol} tokens, they'll be distributed automatically.
                 </p>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                <h4 className="font-medium text-primary mb-2">
                   Automatic Token Check
                 </h4>
-                <p className="text-sm text-blue-600 dark:text-blue-400">
+                <p className="text-sm text-foreground">
                   The system will check if your admin wallet has any {tokenData?.symbol} tokens and distribute them to your trading wallets.
                   If no tokens are found, this step will be skipped.
                 </p>
@@ -548,10 +548,10 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
           {currentStep === 6 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Choose Trading Strategy
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   Select your trading strategy and start automated trading.
                 </p>
               </div>
@@ -560,12 +560,12 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                 <button
                   onClick={() => startTradingWithStrategy('INCREASE_MAKERS_VOLUME')}
                   disabled={isLoading}
-                  className="p-6 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-left hover:border-solana-500 hover:bg-solana-50 dark:hover:bg-solana-900/20 transition-colors disabled:opacity-50"
+                  className="p-6 border-2 border-border rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
                 >
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                  <h4 className="font-medium text-foreground mb-2">
                     Increase Makers + Volume
                   </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-muted-foreground">
                     Comprehensive strategy to boost both unique traders and trading volume
                   </p>
                 </button>
@@ -573,38 +573,38 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                 <button
                   onClick={() => startTradingWithStrategy('INCREASE_VOLUME_ONLY')}
                   disabled={isLoading}
-                  className="p-6 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-left hover:border-solana-500 hover:bg-solana-50 dark:hover:bg-solana-900/20 transition-colors disabled:opacity-50"
+                  className="p-6 border-2 border-border rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
                 >
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                  <h4 className="font-medium text-foreground mb-2">
                     Volume Only
                   </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-muted-foreground">
                     Focus on maximizing trading volume for your token
                   </p>
                 </button>
               </div>
 
               {/* Session Summary */}
-              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+              <div className="bg-muted/30 rounded-lg p-4">
+                <h4 className="font-medium text-foreground mb-3">
                   Session Summary
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">Token:</span>
-                    <span className="ml-2 text-gray-900 dark:text-white">{tokenData?.name} ({tokenData?.symbol})</span>
+                    <span className="text-muted-foreground">Token:</span>
+                    <span className="ml-2 text-foreground">{tokenData?.name} ({tokenData?.symbol})</span>
                   </div>
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">Trading Wallets:</span>
-                    <span className="ml-2 text-gray-900 dark:text-white">{tradingWallets.length}</span>
+                    <span className="text-muted-foreground">Trading Wallets:</span>
+                    <span className="ml-2 text-foreground">{tradingWallets.length}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">Total SOL:</span>
-                    <span className="ml-2 text-gray-900 dark:text-white">{solAmount} SOL</span>
+                    <span className="text-muted-foreground">Total SOL:</span>
+                    <span className="ml-2 text-foreground">{solAmount} SOL</span>
                   </div>
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">SOL per wallet:</span>
-                    <span className="ml-2 text-gray-900 dark:text-white">{(solAmount / walletCount).toFixed(6)} SOL</span>
+                    <span className="text-muted-foreground">SOL per wallet:</span>
+                    <span className="ml-2 text-foreground">{(solAmount / walletCount).toFixed(6)} SOL</span>
                   </div>
                 </div>
               </div>
@@ -614,11 +614,11 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
 
         {/* Footer */}
         {currentStep < 6 && (
-          <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-6 border-t border-border">
             <button
               onClick={handleBack}
               disabled={currentStep === 1 || isLoading}
-              className="flex items-center px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center px-4 py-2 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
@@ -627,7 +627,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
             <button
               onClick={handleNext}
               disabled={isLoading}
-              className="flex items-center px-6 py-2 bg-solana-600 hover:bg-solana-700 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="btn btn-primary flex items-center"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

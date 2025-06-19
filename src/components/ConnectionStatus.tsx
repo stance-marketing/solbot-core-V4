@@ -14,41 +14,41 @@ const ConnectionStatus: React.FC = () => {
         return {
           icon: Wifi,
           text: 'Connected',
-          color: 'text-green-500',
-          bgColor: 'bg-green-50 dark:bg-green-900/20',
-          borderColor: 'border-green-200 dark:border-green-800',
+          color: 'text-secondary',
+          bgColor: 'bg-secondary/10',
+          borderColor: 'border-secondary/20',
         }
       case 'connecting':
         return {
           icon: Loader2,
           text: 'Connecting...',
           color: 'text-yellow-500',
-          bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
-          borderColor: 'border-yellow-200 dark:border-yellow-800',
+          bgColor: 'bg-yellow-500/10',
+          borderColor: 'border-yellow-500/20',
         }
       case 'disconnected':
         return {
           icon: WifiOff,
           text: 'Disconnected',
           color: 'text-red-500',
-          bgColor: 'bg-red-50 dark:bg-red-900/20',
-          borderColor: 'border-red-200 dark:border-red-800',
+          bgColor: 'bg-red-500/10',
+          borderColor: 'border-red-500/20',
         }
       case 'error':
         return {
           icon: WifiOff,
           text: 'Connection Error',
           color: 'text-red-500',
-          bgColor: 'bg-red-50 dark:bg-red-900/20',
-          borderColor: 'border-red-200 dark:border-red-800',
+          bgColor: 'bg-red-500/10',
+          borderColor: 'border-red-500/20',
         }
       default:
         return {
           icon: WifiOff,
           text: 'Unknown',
-          color: 'text-gray-500',
-          bgColor: 'bg-gray-50 dark:bg-gray-900/20',
-          borderColor: 'border-gray-200 dark:border-gray-800',
+          color: 'text-muted-foreground',
+          bgColor: 'bg-muted',
+          borderColor: 'border-border',
         }
     }
   }
@@ -69,7 +69,7 @@ const ConnectionStatus: React.FC = () => {
           {config.text}
         </div>
         {reconnectAttempts > 0 && status !== 'connected' && (
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-xs text-muted-foreground">
             Attempt {reconnectAttempts}/{maxReconnectAttempts}
           </div>
         )}

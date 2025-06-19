@@ -18,7 +18,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [dispatch])
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
+    <div className={`min-h-screen bg-background transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
       <div className="flex h-screen overflow-hidden">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">

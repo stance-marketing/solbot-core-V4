@@ -24,17 +24,17 @@ const Header: React.FC = () => {
   ]
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+    <header className="bg-card border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-foreground">
             Trading Dashboard
           </h2>
         </div>
 
         <div className="flex items-center space-x-4">
           {/* Theme Selector */}
-          <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+          <div className="flex items-center bg-muted rounded-lg p-1">
             {themeOptions.map((option) => {
               const Icon = option.icon
               const isActive = theme === option.value
@@ -45,8 +45,8 @@ const Header: React.FC = () => {
                   onClick={() => handleThemeChange(option.value)}
                   className={`p-2 rounded-md transition-all duration-200 ${
                     isActive
-                      ? 'bg-white dark:bg-gray-600 text-solana-600 dark:text-solana-400 shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      ? 'bg-card text-primary shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                   title={option.label}
                 >
@@ -57,17 +57,17 @@ const Header: React.FC = () => {
           </div>
 
           {/* Notifications */}
-          <button className="relative p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+          <button className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
 
           {/* User Menu */}
-          <button className="flex items-center space-x-2 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+          <button className="flex items-center space-x-2 p-2 text-muted-foreground hover:text-foreground transition-colors">
             <User className="w-5 h-5" />
             <span className="text-sm font-medium">Admin</span>
           </button>
