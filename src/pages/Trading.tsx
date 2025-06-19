@@ -17,7 +17,9 @@ import {
   RefreshCw,
   Zap,
   Target,
-  Timer
+  Timer,
+  RotateCcw,
+  ArrowDown
 } from 'lucide-react'
 import { RootState } from '../store/store'
 import { backendService } from '../services/backendService'
@@ -38,6 +40,9 @@ import WalletTradingGrid from '../components/trading/WalletTradingGrid'
 import TradingLapMonitor from '../components/trading/TradingLapMonitor'
 import TransactionMonitor from '../components/trading/TransactionMonitor'
 import TradingMetrics from '../components/trading/TradingMetrics'
+import DynamicLapManager from '../components/trading/DynamicLapManager'
+import CollectionMonitor from '../components/trading/CollectionMonitor'
+import WalletRegenerationTracker from '../components/trading/WalletRegenerationTracker'
 import toast from 'react-hot-toast'
 
 const Trading: React.FC = () => {
@@ -59,6 +64,13 @@ const Trading: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [walletStatuses, setWalletStatuses] = useState<Map<string, any>>(new Map())
   const [recentTransactions, setRecentTransactions] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState<'control' | 'laps' | 'collection' | 'regeneration'>('control')
+  
+  // Lap management state
+  const [isCollectionActive, setIsCollectionActive] = useState(false)
+  const [isRegenerationActive, setIsRegenerationActive] = useState(false)
+  const [lapResults, setLapResults] = useState<any[]>([])
+  const [collectionData, setCollectionData] = useState<any[]>([])
 
   // Real-time updates
   useEffect(() => {
@@ -171,6 +183,47 @@ const Trading: React.FC = () => {
     }
   }
 
+  const handleLapComplete = (result: any) => {
+    setLapResults(prev => [...prev, result])
+    
+    if (result.status === 'completed') {
+      // Start collection process
+      setIsCollectionActive(true)
+      setActiveTab('collection')
+    }
+  }
+
+  const handleCollectionUpdate = (data: any[]) => {
+    setCollectionData(data)
+    
+    // Check if collection is complete
+    const allCompleted = data.every(wallet => wallet.status === 'completed' || wallet.status === 'failed')
+    
+    if (allCompleted) {
+      setIsCollectionActive(false)
+      
+      // Start regeneration process
+      const totalSol = data.reduce((sum, wallet) => sum + wallet.solCollected, 0)
+      const totalTokens = data.reduce((sum, wallet) => sum + wallet.tokensCollected, 0)
+      
+      if (totalSol > 0 || totalTokens > 0) {
+        setIsRegenerationActive(true)
+        setActiveTab('regeneration')
+      }
+    }
+  }
+
+  const handleRegenerationComplete = (result: any) => {
+    setIsRegenerationActive(false)
+    
+    if (result.success) {
+      toast.success('Wallet regeneration completed successfully!')
+      setActiveTab('control')
+    } else {
+      toast.error(`Regeneration failed: ${result.error}`)
+    }
+  }
+
   const formatTime = (milliseconds: number) => {
     const totalSeconds = Math.floor(milliseconds / 1000)
     const minutes = Math.floor(totalSeconds / 60)
@@ -204,16 +257,23 @@ const Trading: React.FC = () => {
   const successfulTransactions = recentTransactions.filter(tx => tx.status === 'success').length
   const successRate = totalTransactions > 0 ? (successfulTransactions / totalTransactions) * 100 : 0
 
+  const tabs = [
+    { id: 'control', name: 'Trading Control', icon: Settings },
+    { id: 'laps', name: 'Lap Management', icon: Target },
+    { id: 'collection', name: 'Collection Monitor', icon: ArrowDown },
+    { id: 'regeneration', name: 'Wallet Regeneration', icon: RotateCcw }
+  ]
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Trading Control Center
+            Advanced Trading Control Center
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Monitor and control your automated trading operations
+            Dynamic multi-lap trading with automatic wallet regeneration
           </p>
         </div>
         
@@ -269,46 +329,112 @@ const Trading: React.FC = () => {
         timeLeft={timeLeft}
       />
 
-      {/* Trading Control Panel */}
-      <TradingControlPanel
-        status={status}
-        strategy={strategy}
-        selectedStrategy={selectedStrategy}
-        onStrategyChange={setSelectedStrategy}
-        onStart={handleStartTrading}
-        onPause={handlePauseTrading}
-        onResume={handleResumeTrading}
-        onStop={handleStopTrading}
-        isLoading={isLoading}
-        canStart={!!(currentSession && adminWallet && tradingWallets.length > 0)}
-      />
+      {/* Tab Navigation */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="flex space-x-8 px-6">
+            {tabs.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    isActive
+                      ? 'border-solana-500 text-solana-600 dark:text-solana-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.name}</span>
+                  {tab.id === 'collection' && isCollectionActive && (
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  )}
+                  {tab.id === 'regeneration' && isRegenerationActive && (
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  )}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
 
-      {/* Trading Status Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Lap Monitor */}
-        <TradingLapMonitor
-          currentLap={currentLap}
-          laps={laps}
-          elapsedTime={elapsedTime}
-          timeLeft={timeLeft}
-          duration={duration}
-          status={status}
-        />
+        {/* Tab Content */}
+        <div className="p-6">
+          {activeTab === 'control' && (
+            <div className="space-y-6">
+              {/* Trading Control Panel */}
+              <TradingControlPanel
+                status={status}
+                strategy={strategy}
+                selectedStrategy={selectedStrategy}
+                onStrategyChange={setSelectedStrategy}
+                onStart={handleStartTrading}
+                onPause={handlePauseTrading}
+                onResume={handleResumeTrading}
+                onStop={handleStopTrading}
+                isLoading={isLoading}
+                canStart={!!(currentSession && adminWallet && tradingWallets.length > 0)}
+              />
 
-        {/* Transaction Monitor */}
-        <TransactionMonitor
-          transactions={recentTransactions}
-          onTransactionUpdate={setRecentTransactions}
-        />
+              {/* Trading Status Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Lap Monitor */}
+                <TradingLapMonitor
+                  currentLap={currentLap}
+                  laps={laps}
+                  elapsedTime={elapsedTime}
+                  timeLeft={timeLeft}
+                  duration={duration}
+                  status={status}
+                />
+
+                {/* Transaction Monitor */}
+                <TransactionMonitor
+                  transactions={recentTransactions}
+                  onTransactionUpdate={setRecentTransactions}
+                />
+              </div>
+
+              {/* Wallet Trading Grid */}
+              <WalletTradingGrid
+                wallets={tradingWallets}
+                walletStatuses={walletStatuses}
+                globalTradingFlag={globalTradingFlag}
+                tokenSymbol={currentSession?.tokenName}
+              />
+            </div>
+          )}
+
+          {activeTab === 'laps' && (
+            <DynamicLapManager
+              isActive={status === 'running'}
+              onLapComplete={handleLapComplete}
+            />
+          )}
+
+          {activeTab === 'collection' && (
+            <CollectionMonitor
+              wallets={tradingWallets}
+              tokenSymbol={currentSession?.tokenName || 'Tokens'}
+              isActive={isCollectionActive}
+              onCollectionUpdate={handleCollectionUpdate}
+            />
+          )}
+
+          {activeTab === 'regeneration' && (
+            <WalletRegenerationTracker
+              isActive={isRegenerationActive}
+              walletCount={tradingWallets.length}
+              solAmount={collectionData.reduce((sum, wallet) => sum + wallet.solCollected, 0)}
+              tokenAmount={collectionData.reduce((sum, wallet) => sum + wallet.tokensCollected, 0)}
+              tokenSymbol={currentSession?.tokenName || 'Tokens'}
+              onRegenerationComplete={handleRegenerationComplete}
+            />
+          )}
+        </div>
       </div>
-
-      {/* Wallet Trading Grid */}
-      <WalletTradingGrid
-        wallets={tradingWallets}
-        walletStatuses={walletStatuses}
-        globalTradingFlag={globalTradingFlag}
-        tokenSymbol={currentSession?.tokenName}
-      />
     </div>
   )
 }
