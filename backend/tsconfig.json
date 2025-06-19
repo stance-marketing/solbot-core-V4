@@ -17,14 +17,10 @@
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "baseUrl": ".",
-    "paths": {
-      "*": ["../*"]
-    }
+    "typeRoots": ["./node_modules/@types", "../node_modules/@types"]
   },
   "include": [
-    "**/*.ts",
-    "../*.ts"
+    "**/*.ts"
   ],
   "exclude": [
     "node_modules",
