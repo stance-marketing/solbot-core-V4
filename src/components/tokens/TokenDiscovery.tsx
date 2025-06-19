@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Search, CheckCircle, AlertCircle, Loader2, Eye, EyeOff, ExternalLink } from 'lucide-react'
+import { Search, CheckCircle, AlertCircle, Loader2, ExternalLink } from 'lucide-react'
 import { backendService } from '../../services/backendService'
 import toast from 'react-hot-toast'
 
@@ -32,9 +32,7 @@ const TokenDiscovery: React.FC<TokenDiscoveryProps> = ({
   const [tokenAddress, setTokenAddress] = useState(initialAddress)
   const [isValidating, setIsValidating] = useState(false)
   const [tokenData, setTokenData] = useState<TokenData | null>(null)
-  const [poolKeys, setPoolKeys] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const [showDetails, setShowDetails] = useState(false)
 
   const validateToken = async () => {
     if (!tokenAddress.trim()) {
@@ -51,43 +49,33 @@ const TokenDiscovery: React.FC<TokenDiscoveryProps> = ({
     setIsValidating(true)
     setError(null)
     setTokenData(null)
-    setPoolKeys(null)
 
     try {
-      console.log('Validating token:', tokenAddress)
+      console.log('Validating token with backend:', tokenAddress)
       
-      // Step 1: Validate token and get data from Dexscreener
+      // Step 1: Validate token and get data from backend
       const validationResult = await backendService.validateTokenAddress(tokenAddress)
       
       if (!validationResult.isValid || !validationResult.tokenData) {
-        throw new Error('Token not found or invalid. Please check the address.')
+        throw new Error('Token not found or not tradeable. Please check the address.')
       }
 
-      console.log('Token validated:', validationResult.tokenData)
+      console.log('Token validated successfully:', validationResult.tokenData)
       setTokenData(validationResult.tokenData)
 
-      // Step 2: Get pool keys
-      console.log('Fetching pool keys...')
-      const fetchedPoolKeys = await backendService.getPoolKeys(tokenAddress)
+      // Step 2: Get pool information from backend
+      console.log('Getting pool information...')
+      const poolKeys = await backendService.getPoolKeys(tokenAddress)
       
-      if (!fetchedPoolKeys) {
-        throw new Error('Pool keys not found for this token')
+      if (!poolKeys) {
+        throw new Error('This token is not available for trading on Raydium')
       }
 
-      console.log('Pool keys fetched:', fetchedPoolKeys)
-      setPoolKeys(fetchedPoolKeys)
+      console.log('Pool information confirmed')
 
-      // Step 3: Get market ID for additional validation
-      try {
-        const marketId = await backendService.getMarketId(tokenAddress)
-        console.log('Market ID confirmed:', marketId)
-      } catch (marketError) {
-        console.warn('Market ID not found, but proceeding with pool keys')
-      }
-
-      // Success - call the callback
-      onTokenValidated(validationResult.tokenData, fetchedPoolKeys)
-      toast.success(`Token validated: ${validationResult.tokenData.name}`)
+      // Success - call the callback with validated data
+      onTokenValidated(validationResult.tokenData, poolKeys)
+      toast.success(`${validationResult.tokenData.name} is ready for trading!`)
 
     } catch (error) {
       console.error('Token validation error:', error)
@@ -110,7 +98,7 @@ const TokenDiscovery: React.FC<TokenDiscoveryProps> = ({
       {/* Token Address Input */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Solana Token Address
+          Token Address
         </label>
         <div className="relative">
           <input
@@ -118,7 +106,7 @@ const TokenDiscovery: React.FC<TokenDiscoveryProps> = ({
             value={tokenAddress}
             onChange={(e) => setTokenAddress(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Enter Solana token address (e.g., 4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R)"
+            placeholder="Enter token address to start trading..."
             className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-solana-500 focus:border-transparent"
             disabled={isValidating}
           />
@@ -144,114 +132,55 @@ const TokenDiscovery: React.FC<TokenDiscoveryProps> = ({
       </div>
 
       {/* Validation Results */}
-      {tokenData && poolKeys && (
+      {tokenData && (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-              <h3 className="font-medium text-green-800 dark:text-green-300">
-                Token Validated Successfully
-              </h3>
-            </div>
-            
-            {showFullInterface && (
-              <button
-                onClick={() => setShowDetails(!showDetails)}
-                className="flex items-center space-x-1 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 transition-colors"
-              >
-                {showDetails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                <span className="text-sm">{showDetails ? 'Hide' : 'Show'} Details</span>
-              </button>
-            )}
+          <div className="flex items-center space-x-2 mb-3">
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <h3 className="font-medium text-green-800 dark:text-green-300">
+              {tokenData.name} ({tokenData.symbol}) - Ready for Trading!
+            </h3>
           </div>
 
-          {/* Basic Info */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-green-600 dark:text-green-400 font-medium">Name:</span>
-              <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.name}</span>
+          {/* Market Info */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="text-center">
+              <div className="text-green-600 dark:text-green-400 font-medium">Price</div>
+              <div className="text-green-800 dark:text-green-300">${tokenData.price}</div>
             </div>
-            <div>
-              <span className="text-green-600 dark:text-green-400 font-medium">Symbol:</span>
-              <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.symbol}</span>
+            <div className="text-center">
+              <div className="text-green-600 dark:text-green-400 font-medium">24h Volume</div>
+              <div className="text-green-800 dark:text-green-300">${tokenData.volume?.h24}</div>
             </div>
-            <div>
-              <span className="text-green-600 dark:text-green-400 font-medium">Pool:</span>
-              <span className="ml-2 text-green-800 dark:text-green-300">✓ Raydium V{poolKeys.version || 4}</span>
+            <div className="text-center">
+              <div className="text-green-600 dark:text-green-400 font-medium">24h Change</div>
+              <div className={`${
+                tokenData.priceChange?.h24?.startsWith('+') 
+                  ? 'text-green-600 dark:text-green-400' 
+                  : 'text-red-600 dark:text-red-400'
+              }`}>
+                {tokenData.priceChange?.h24}%
+              </div>
             </div>
-            <div>
-              <span className="text-green-600 dark:text-green-400 font-medium">Status:</span>
-              <span className="ml-2 text-green-800 dark:text-green-300">✓ Ready for Trading</span>
+            <div className="text-center">
+              <div className="text-green-600 dark:text-green-400 font-medium">24h Trades</div>
+              <div className="text-green-800 dark:text-green-300">
+                {(tokenData.txns?.h24?.buys || 0) + (tokenData.txns?.h24?.sells || 0)}
+              </div>
             </div>
           </div>
 
-          {/* Detailed Info */}
-          {showDetails && showFullInterface && (
-            <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Market Data</h4>
-                  <div className="space-y-1">
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">Price:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.price}</span>
-                    </div>
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">24h Volume:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.volume?.h24}</span>
-                    </div>
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">24h Change:</span>
-                      <span className={`ml-2 ${
-                        tokenData.priceChange?.h24?.startsWith('+') 
-                          ? 'text-green-600 dark:text-green-400' 
-                          : 'text-red-600 dark:text-red-400'
-                      }`}>
-                        {tokenData.priceChange?.h24}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Trading Activity</h4>
-                  <div className="space-y-1">
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">24h Buys:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.txns?.h24?.buys}</span>
-                    </div>
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">24h Sells:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.txns?.h24?.sells}</span>
-                    </div>
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">Pool Version:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">Raydium V{poolKeys.version || 4}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Token Address */}
-              <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800">
-                <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Token Address</h4>
-                <div className="flex items-center space-x-2">
-                  <code className="flex-1 px-3 py-2 bg-green-100 dark:bg-green-900/30 rounded text-xs font-mono text-green-800 dark:text-green-300 break-all">
-                    {tokenData.address}
-                  </code>
-                  <a
-                    href={`https://solscan.io/token/${tokenData.address}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 transition-colors"
-                    title="View on Solscan"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* View on Solscan */}
+          <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800">
+            <a
+              href={`https://solscan.io/token/${tokenData.address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-2 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="text-sm">View on Solscan</span>
+            </a>
+          </div>
         </div>
       )}
 
@@ -265,7 +194,7 @@ const TokenDiscovery: React.FC<TokenDiscoveryProps> = ({
                 Validating Token...
               </h3>
               <p className="text-sm text-blue-600 dark:text-blue-400">
-                Checking token data and pool information
+                Checking if this token is available for trading
               </p>
             </div>
           </div>
