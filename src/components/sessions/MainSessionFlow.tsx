@@ -5,6 +5,7 @@ import { backendService } from '../../services/backendService'
 import { setCurrentSession } from '../../store/slices/sessionSlice'
 import { setAdminWallet, setTradingWallets } from '../../store/slices/walletSlice'
 import { WalletData } from '../../store/slices/walletSlice'
+import TokenDiscovery from '../tokens/TokenDiscovery'
 import toast from 'react-hot-toast'
 
 interface MainSessionFlowProps {
@@ -68,55 +69,18 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
   }
 
   // Step 1: Token Discovery + Session Creation (matches your exact flow)
-  const validateTokenAndCreateSession = async () => {
-    if (!tokenAddress.trim()) {
-      setError('Please enter a token address')
-      return false
-    }
-
-    setIsLoading(true)
+  const handleTokenValidated = (validatedTokenData: any, validatedPoolKeys: any) => {
+    setTokenData(validatedTokenData)
+    setTokenAddress(validatedTokenData.address)
+    setPoolKeys(validatedPoolKeys)
+    
+    // Create session file name
+    const timestamp = new Date().toISOString()
+    const fileName = `${validatedTokenData.name}_${new Date().toLocaleDateString().replace(/\//g, '.')}_${new Date().toLocaleTimeString().replace(/:/g, '.')}_session.json`
+    setSessionFileName(fileName)
+    
     setError(null)
-
-    try {
-      console.log('Validating token:', tokenAddress) // Debug log
-      
-      // For now, simulate the backend call since backend isn't running
-      // In production, this would call your actual backend
-      const mockTokenData = {
-        name: 'Mock Token',
-        symbol: 'MOCK',
-        price: '$0.001234',
-        volume: { h24: '$1,234,567' },
-        priceChange: { h24: '+5.67' },
-        txns: { h24: { buys: 123, sells: 89 } }
-      }
-      
-      const mockPoolKeys = {
-        version: 4,
-        marketId: 'mock_market_id',
-        baseMint: tokenAddress,
-        quoteMint: 'So11111111111111111111111111111111111111112'
-      }
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      setTokenData(mockTokenData)
-      setPoolKeys(mockPoolKeys)
-
-      // Create session file name
-      const timestamp = new Date().toISOString()
-      const fileName = `${mockTokenData.name}_${new Date().toLocaleDateString().replace(/\//g, '.')}_${new Date().toLocaleTimeString().replace(/:/g, '.')}_session.json`
-      setSessionFileName(fileName)
-      
-      toast.success(`Token validated and session file created: ${fileName}`)
-      return true
-    } catch (error) {
-      setError(`Failed to validate token and create session: ${error.message}`)
-      return false
-    } finally {
-      setIsLoading(false)
-    }
+    toast.success(`Token validated and session file created: ${fileName}`)
   }
 
   // Step 2: Admin Wallet + Session Update (matches your exact flow)
@@ -127,25 +91,19 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     try {
       console.log('Creating admin wallet...') // Debug log
       
-      // Simulate admin wallet creation
-      const mockAdminWallet: WalletData = {
-        number: 0,
-        publicKey: 'EAJ8mmeaoHRX97db5GZ9d7rMLQgKC58kzbuzhmtxmXmB',
-        privateKey: adminWalletOption === 'import' ? adminPrivateKey : 'mock_generated_private_key',
-        solBalance: 0,
-        tokenBalance: 0,
-        isActive: true
-      }
+      let wallet: WalletData
 
-      if (adminWalletOption === 'import' && !adminPrivateKey.trim()) {
-        setError('Please enter admin wallet private key')
-        return false
+      if (adminWalletOption === 'import') {
+        if (!adminPrivateKey.trim()) {
+          setError('Please enter admin wallet private key')
+          return false
+        }
+        wallet = await backendService.importAdminWallet(adminPrivateKey)
+      } else {
+        wallet = await backendService.createAdminWallet()
       }
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500))
       
-      setAdminWalletState(mockAdminWallet)
+      setAdminWalletState(wallet)
       toast.success('Admin wallet created and session updated')
       return true
     } catch (error) {
@@ -169,22 +127,9 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     try {
       console.log('Generating wallets...') // Debug log
       
-      // Simulate wallet generation
-      const mockWallets: WalletData[] = Array.from({ length: walletCount }, (_, i) => ({
-        number: i + 1,
-        publicKey: `Wallet${i + 1}PublicKey${Math.random().toString(36).substr(2, 9)}`,
-        privateKey: `wallet_${i + 1}_private_key`,
-        solBalance: 0,
-        tokenBalance: 0,
-        isActive: false,
-        generationTimestamp: new Date().toISOString()
-      }))
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      setTradingWalletsState(mockWallets)
-      toast.success(`Generated ${mockWallets.length} wallets and updated session`)
+      const wallets = await backendService.generateTradingWallets(walletCount)
+      setTradingWalletsState(wallets)
+      toast.success(`Generated ${wallets.length} wallets and updated session`)
       return true
     } catch (error) {
       setError(`Failed to generate trading wallets: ${error.message}`)
@@ -212,17 +157,7 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     try {
       console.log('Distributing SOL...') // Debug log
       
-      // Simulate SOL distribution
-      const amountPerWallet = solAmount / tradingWallets.length
-      const updatedWallets = tradingWallets.map(wallet => ({
-        ...wallet,
-        solBalance: amountPerWallet,
-        isActive: true
-      }))
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      
+      const updatedWallets = await backendService.distributeSol(adminWallet, tradingWallets, solAmount)
       setTradingWalletsState(updatedWallets)
       toast.success(`Successfully distributed SOL to ${updatedWallets.length} wallets`)
       return true
@@ -242,13 +177,13 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
     try {
       console.log('Checking for tokens to distribute...') // Debug log
       
-      // Simulate checking admin token balance
-      const mockAdminTokenBalance = Math.random() > 0.5 ? 1000 : 0
+      // Check admin token balance
+      const adminTokenBalance = await backendService.getAdminTokenBalance(adminWallet!, tokenAddress)
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      if (mockAdminTokenBalance > 0) {
+      if (adminTokenBalance > 0) {
+        const amountPerWallet = adminTokenBalance / tradingWallets.length
+        const updatedWallets = await backendService.distributeTokens(adminWallet!, tradingWallets, tokenAddress, amountPerWallet)
+        setTradingWalletsState(updatedWallets)
         toast.success('Tokens distributed to wallets')
       } else {
         toast.info('Admin wallet has 0 tokens - skipping token distribution')
@@ -294,8 +229,12 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
         timestamp: new Date().toISOString()
       }
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Save session first
+      const savedFileName = await backendService.saveSession(sessionData)
+      console.log('Session saved:', savedFileName)
+
+      // Start trading
+      await backendService.startTrading(strategy, sessionData)
       
       // Update Redux store
       dispatch(setCurrentSession(sessionData))
@@ -316,7 +255,10 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
 
     switch (currentStep) {
       case 1:
-        canProceed = await validateTokenAndCreateSession()
+        canProceed = !!(tokenData && poolKeys)
+        if (!canProceed) {
+          setError('Please validate a token and ensure pool keys are fetched')
+        }
         break
       case 2:
         canProceed = await createAdminWalletAndUpdateSession()
@@ -423,76 +365,11 @@ const MainSessionFlow: React.FC<MainSessionFlowProps> = ({ isOpen, onClose }) =>
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Token Address
-                </label>
-                <input
-                  type="text"
-                  value={tokenAddress}
-                  onChange={(e) => setTokenAddress(e.target.value)}
-                  placeholder="Enter Solana token address..."
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-solana-500 focus:border-transparent"
-                />
-              </div>
-
-              {tokenData && poolKeys && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-green-800 dark:text-green-300">
-                      Token & Pool Validated Successfully
-                    </h4>
-                    <button
-                      onClick={() => setShowTokenInfo(!showTokenInfo)}
-                      className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
-                    >
-                      {showTokenInfo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">Name:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.name}</span>
-                    </div>
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">Symbol:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.symbol}</span>
-                    </div>
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">Pool:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">✓ Found</span>
-                    </div>
-                    <div>
-                      <span className="text-green-600 dark:text-green-400">Session:</span>
-                      <span className="ml-2 text-green-800 dark:text-green-300">✓ Created</span>
-                    </div>
-                  </div>
-
-                  {showTokenInfo && (
-                    <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-green-600 dark:text-green-400">Price:</span>
-                          <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.price}</span>
-                        </div>
-                        <div>
-                          <span className="text-green-600 dark:text-green-400">24h Volume:</span>
-                          <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.volume?.h24}</span>
-                        </div>
-                        <div>
-                          <span className="text-green-600 dark:text-green-400">24h Change:</span>
-                          <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.priceChange?.h24}%</span>
-                        </div>
-                        <div>
-                          <span className="text-green-600 dark:text-green-400">24h Buys:</span>
-                          <span className="ml-2 text-green-800 dark:text-green-300">{tokenData.txns?.h24?.buys}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              <TokenDiscovery 
+                onTokenValidated={handleTokenValidated}
+                initialAddress={tokenAddress}
+                showFullInterface={true}
+              />
             </div>
           )}
 
