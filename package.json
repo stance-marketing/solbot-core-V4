@@ -7,10 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "server": "node server-cjs.js",
+    "server": "node server-cjs.cjs",
     "test-backend": "node test-backend.js",
     "start": "concurrently \"npm run server\" \"npm run dev\"",
-    "start-backend": "node server-cjs.js",
+    "start-backend": "node server-cjs.cjs",
     "test-integration": "npm run test-backend"
   },
   "dependencies": {
