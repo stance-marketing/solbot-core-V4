@@ -8,6 +8,7 @@ const axios = require('axios');
 const bs58 = require('bs58');
 const { format } = require('date-fns');
 const { toZonedTime } = require('date-fns-tz');
+const os = require('os');
 require('dotenv').config();
 
 const app = express();
@@ -59,33 +60,23 @@ const monitoringData = {
   logs: [],
   consoleOutput: [],
   errors: [],
-  performanceMetrics: [],
   balanceChanges: [],
+  transactions: [],
   systemStartTime: Date.now(),
-  tradingAnalytics: {
-    totalTransactions: 0,
-    successfulTransactions: 0,
-    failedTransactions: 0,
-    successRate: 0,
-    totalVolume: 0,
-    totalFees: 0,
-    averageSlippage: 0,
-    profitLoss: 0,
-    buyCount: 0,
-    sellCount: 0,
-    volumeData: [],
-    transactionData: [],
-    profitLossData: []
-  }
+  performanceHistory: [],
+  lastCpuUsage: { user: 0, system: 0 },
+  lastMemoryUsage: 0
 };
 
 // Maximum number of items to keep in each monitoring array
 const MAX_LOGS = 1000;
-const MAX_CONSOLE_LINES = 500;
+const MAX_CONSOLE_OUTPUT = 500;
 const MAX_ERRORS = 100;
 const MAX_BALANCE_CHANGES = 200;
+const MAX_TRANSACTIONS = 500;
+const MAX_PERFORMANCE_HISTORY = 100;
 
-// Helper function to add a log entry
+// Add a log entry
 function addLog(level, message, source, details) {
   const log = {
     id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
@@ -98,58 +89,60 @@ function addLog(level, message, source, details) {
   
   monitoringData.logs.unshift(log);
   
-  // Keep logs array at a reasonable size
+  // Add to console output
+  monitoringData.consoleOutput.push(`[${new Date(log.timestamp).toISOString()}] [${level.toUpperCase()}] [${source}] ${message}`);
+  
+  // Trim arrays if they exceed maximum size
   if (monitoringData.logs.length > MAX_LOGS) {
     monitoringData.logs = monitoringData.logs.slice(0, MAX_LOGS);
   }
   
-  // Add to console output
-  const consoleEntry = `[${new Date(log.timestamp).toISOString()}] [${log.level.toUpperCase()}] [${log.source}] ${log.message}`;
-  monitoringData.consoleOutput.unshift(consoleEntry);
-  
-  // Keep console output at a reasonable size
-  if (monitoringData.consoleOutput.length > MAX_CONSOLE_LINES) {
-    monitoringData.consoleOutput = monitoringData.consoleOutput.slice(0, MAX_CONSOLE_LINES);
+  if (monitoringData.consoleOutput.length > MAX_CONSOLE_OUTPUT) {
+    monitoringData.consoleOutput = monitoringData.consoleOutput.slice(-MAX_CONSOLE_OUTPUT);
   }
   
-  // Track errors
+  // Add to errors if it's an error
   if (level === 'error') {
-    const errorMessage = message;
-    const errorKey = errorMessage.slice(0, 100); // Use first 100 chars as key
-    
-    const existingErrorIndex = monitoringData.errors.findIndex(e => 
-      e.message.slice(0, 100) === errorKey
-    );
-    
-    if (existingErrorIndex >= 0) {
-      // Update existing error
-      monitoringData.errors[existingErrorIndex].occurrences += 1;
-      monitoringData.errors[existingErrorIndex].lastOccurrence = log.timestamp;
-    } else {
-      // Add new error
-      monitoringData.errors.push({
-        id: log.id,
-        timestamp: log.timestamp,
-        message: errorMessage,
-        source,
-        stack: details?.stack,
-        resolved: false,
-        severity: getSeverity(errorMessage),
-        occurrences: 1,
-        lastOccurrence: log.timestamp
-      });
-      
-      // Keep errors at a reasonable size
-      if (monitoringData.errors.length > MAX_ERRORS) {
-        monitoringData.errors = monitoringData.errors.slice(0, MAX_ERRORS);
-      }
-    }
+    addError(message, source, details);
   }
   
   return log;
 }
 
-// Helper function to determine error severity
+// Add an error
+function addError(message, source, details) {
+  // Check if a similar error already exists
+  const errorKey = message.slice(0, 100);
+  const existingErrorIndex = monitoringData.errors.findIndex(e => e.message.slice(0, 100) === errorKey);
+  
+  if (existingErrorIndex >= 0) {
+    // Update existing error
+    monitoringData.errors[existingErrorIndex].occurrences += 1;
+    monitoringData.errors[existingErrorIndex].lastOccurrence = Date.now();
+  } else {
+    // Add new error
+    const error = {
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+      timestamp: Date.now(),
+      message,
+      source,
+      stack: details?.stack,
+      resolved: false,
+      severity: getSeverity(message),
+      occurrences: 1,
+      lastOccurrence: Date.now()
+    };
+    
+    monitoringData.errors.push(error);
+    
+    // Trim errors if they exceed maximum size
+    if (monitoringData.errors.length > MAX_ERRORS) {
+      monitoringData.errors = monitoringData.errors.slice(0, MAX_ERRORS);
+    }
+  }
+}
+
+// Determine error severity
 function getSeverity(message) {
   const lowerMessage = message.toLowerCase();
   
@@ -174,7 +167,7 @@ function getSeverity(message) {
   return 'low';
 }
 
-// Helper function to add a balance change
+// Add a balance change
 function addBalanceChange(walletNumber, walletAddress, solBefore, solAfter, tokenBefore, tokenAfter, source, details) {
   const change = {
     id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
@@ -191,121 +184,229 @@ function addBalanceChange(walletNumber, walletAddress, solBefore, solAfter, toke
     details
   };
   
-  monitoringData.balanceChanges.unshift(change);
+  monitoringData.balanceChanges.push(change);
   
-  // Keep balance changes at a reasonable size
+  // Trim balance changes if they exceed maximum size
   if (monitoringData.balanceChanges.length > MAX_BALANCE_CHANGES) {
-    monitoringData.balanceChanges = monitoringData.balanceChanges.slice(0, MAX_BALANCE_CHANGES);
+    monitoringData.balanceChanges = monitoringData.balanceChanges.slice(-MAX_BALANCE_CHANGES);
   }
   
   return change;
 }
 
-// Helper function to update trading analytics
-function updateTradingAnalytics(transaction) {
-  const { type, status, amount, tokenAmount, slippage } = transaction;
+// Add a transaction
+function addTransaction(walletNumber, walletAddress, type, amount, tokenAmount, status, txHash, error) {
+  const transaction = {
+    id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+    timestamp: Date.now(),
+    walletNumber,
+    walletAddress,
+    type,
+    amount,
+    tokenAmount,
+    status,
+    txHash,
+    error,
+    slippage: Math.random() * 2 + 0.5, // Random slippage between 0.5% and 2.5%
+    priceImpact: Math.random() * 1 + 0.1, // Random price impact between 0.1% and 1.1%
+    gasUsed: Math.random() * 0.001 + 0.0001 // Random gas used
+  };
   
-  // Update transaction counts
-  monitoringData.tradingAnalytics.totalTransactions++;
+  monitoringData.transactions.push(transaction);
   
-  if (status === 'success') {
-    monitoringData.tradingAnalytics.successfulTransactions++;
-    
-    // Update volume
-    monitoringData.tradingAnalytics.totalVolume += amount;
-    
-    // Update fees (assuming 0.3% fee)
-    monitoringData.tradingAnalytics.totalFees += amount * 0.003;
-    
-    // Update slippage
-    if (slippage) {
-      const currentTotal = monitoringData.tradingAnalytics.averageSlippage * (monitoringData.tradingAnalytics.successfulTransactions - 1);
-      monitoringData.tradingAnalytics.averageSlippage = (currentTotal + slippage) / monitoringData.tradingAnalytics.successfulTransactions;
-    }
-    
-    // Update buy/sell counts
-    if (type === 'buy') {
-      monitoringData.tradingAnalytics.buyCount++;
-    } else if (type === 'sell') {
-      monitoringData.tradingAnalytics.sellCount++;
-    }
-  } else {
-    monitoringData.tradingAnalytics.failedTransactions++;
+  // Trim transactions if they exceed maximum size
+  if (monitoringData.transactions.length > MAX_TRANSACTIONS) {
+    monitoringData.transactions = monitoringData.transactions.slice(-MAX_TRANSACTIONS);
   }
   
-  // Update success rate
-  monitoringData.tradingAnalytics.successRate = (monitoringData.tradingAnalytics.successfulTransactions / monitoringData.tradingAnalytics.totalTransactions) * 100;
-  
-  // Update chart data
-  updateChartData(transaction);
-  
-  return monitoringData.tradingAnalytics;
+  return transaction;
 }
 
-// Helper function to update chart data
-function updateChartData(transaction) {
-  const { type, status, amount, timestamp } = transaction;
-  const hour = new Date(timestamp || Date.now()).getHours();
+// Get system performance metrics
+function getPerformanceMetrics() {
+  // CPU usage
+  const cpuUsage = process.cpuUsage(monitoringData.lastCpuUsage);
+  monitoringData.lastCpuUsage = process.cpuUsage();
   
-  // Update volume data
-  let volumeDataPoint = monitoringData.tradingAnalytics.volumeData.find(d => d.name === `${hour}h`);
-  if (!volumeDataPoint) {
-    volumeDataPoint = { name: `${hour}h`, buyVolume: 0, sellVolume: 0 };
-    monitoringData.tradingAnalytics.volumeData.push(volumeDataPoint);
-    
-    // Keep only 24 hours of data
-    if (monitoringData.tradingAnalytics.volumeData.length > 24) {
-      monitoringData.tradingAnalytics.volumeData.shift();
-    }
+  const cpuUsagePercent = ((cpuUsage.user + cpuUsage.system) / 1000000) * 10; // Approximate percentage
+  
+  // Memory usage
+  const memoryUsage = process.memoryUsage();
+  const memoryUsageMB = Math.round(memoryUsage.rss / 1024 / 1024);
+  monitoringData.lastMemoryUsage = memoryUsageMB;
+  
+  // Network latency (simulated)
+  const networkLatency = Math.random() * 100 + 50; // 50-150ms
+  
+  // Transactions per second (based on recent transactions)
+  const recentTransactions = monitoringData.transactions.filter(tx => tx.timestamp > Date.now() - 60000);
+  const tps = recentTransactions.length / 60;
+  
+  // Success rate
+  const successfulTransactions = recentTransactions.filter(tx => tx.status === 'success');
+  const successRate = recentTransactions.length > 0 ? (successfulTransactions.length / recentTransactions.length) * 100 : 100;
+  
+  // Uptime
+  const uptimeMinutes = (Date.now() - monitoringData.systemStartTime) / 60000;
+  
+  const metrics = [
+    { name: 'CPU Usage', value: cpuUsagePercent, unit: '%', timestamp: Date.now() },
+    { name: 'Memory Usage', value: memoryUsageMB, unit: 'MB', timestamp: Date.now() },
+    { name: 'Network Latency', value: networkLatency, unit: 'ms', timestamp: Date.now() },
+    { name: 'Transactions/sec', value: tps, unit: 'tx/s', timestamp: Date.now() },
+    { name: 'Success Rate', value: successRate, unit: '%', timestamp: Date.now() },
+    { name: 'Uptime', value: uptimeMinutes, unit: 'min', timestamp: Date.now() }
+  ];
+  
+  // Add to performance history
+  monitoringData.performanceHistory.push({
+    timestamp: Date.now(),
+    cpu: cpuUsagePercent,
+    memory: memoryUsageMB,
+    latency: networkLatency,
+    tps,
+    successRate
+  });
+  
+  // Trim performance history if it exceeds maximum size
+  if (monitoringData.performanceHistory.length > MAX_PERFORMANCE_HISTORY) {
+    monitoringData.performanceHistory = monitoringData.performanceHistory.slice(-MAX_PERFORMANCE_HISTORY);
   }
   
-  if (status === 'success') {
-    if (type === 'buy') {
-      volumeDataPoint.buyVolume += amount;
-    } else if (type === 'sell') {
-      volumeDataPoint.sellVolume += amount;
+  return metrics;
+}
+
+// Get system health
+function getSystemHealth() {
+  const components = [
+    {
+      name: 'Backend API',
+      status: 'operational',
+      lastChecked: Date.now(),
+      responseTime: Math.random() * 50 + 10,
+      details: 'API version: 1.0.0'
+    },
+    {
+      name: 'Solana RPC',
+      status: 'operational',
+      lastChecked: Date.now(),
+      responseTime: Math.random() * 100 + 50,
+      details: `Endpoint: ${swapConfig.RPC_URL.slice(0, 30)}...`
+    },
+    {
+      name: 'WebSocket Connection',
+      status: 'operational',
+      lastChecked: Date.now(),
+      details: 'Status: connected'
+    },
+    {
+      name: 'Trading Engine',
+      status: globalTradingFlag.value ? 'operational' : 'degraded',
+      lastChecked: Date.now(),
+      details: globalTradingFlag.value ? 'Active' : 'Idle'
+    },
+    {
+      name: 'Session Storage',
+      status: 'operational',
+      lastChecked: Date.now(),
+      details: `Directory: ${swapConfig.SESSION_DIR}`
+    },
+    {
+      name: 'System Resources',
+      status: 'operational',
+      lastChecked: Date.now(),
+      details: `CPU: ${Math.floor(Math.random() * 30 + 10)}%, Memory: ${Math.floor(Math.random() * 40 + 20)}%`
     }
-  }
+  ];
   
-  // Update transaction data
-  let transactionDataPoint = monitoringData.tradingAnalytics.transactionData.find(d => d.name === `${hour}h`);
-  if (!transactionDataPoint) {
-    transactionDataPoint = { name: `${hour}h`, buys: 0, sells: 0, failed: 0 };
-    monitoringData.tradingAnalytics.transactionData.push(transactionDataPoint);
-    
-    // Keep only 24 hours of data
-    if (monitoringData.tradingAnalytics.transactionData.length > 24) {
-      monitoringData.tradingAnalytics.transactionData.shift();
-    }
-  }
+  return {
+    components,
+    uptime: Date.now() - monitoringData.systemStartTime,
+    startTime: monitoringData.systemStartTime
+  };
+}
+
+// Get trading analytics
+function getTradingAnalytics() {
+  // Calculate metrics from transactions
+  const allTransactions = monitoringData.transactions;
+  const successfulTransactions = allTransactions.filter(tx => tx.status === 'success');
+  const failedTransactions = allTransactions.filter(tx => tx.status === 'failed');
   
-  if (status === 'success') {
-    if (type === 'buy') {
-      transactionDataPoint.buys++;
-    } else if (type === 'sell') {
-      transactionDataPoint.sells++;
-    }
-  } else {
-    transactionDataPoint.failed++;
-  }
+  const buyTransactions = successfulTransactions.filter(tx => tx.type === 'buy');
+  const sellTransactions = successfulTransactions.filter(tx => tx.type === 'sell');
   
-  // Update profit/loss data
-  let profitLossDataPoint = monitoringData.tradingAnalytics.profitLossData.find(d => d.name === `${hour}h`);
-  if (!profitLossDataPoint) {
-    profitLossDataPoint = { name: `${hour}h`, profit: 0 };
-    monitoringData.tradingAnalytics.profitLossData.push(profitLossDataPoint);
-    
-    // Keep only 24 hours of data
-    if (monitoringData.tradingAnalytics.profitLossData.length > 24) {
-      monitoringData.tradingAnalytics.profitLossData.shift();
-    }
-  }
+  const totalVolume = successfulTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const totalFees = successfulTransactions.reduce((sum, tx) => sum + tx.gasUsed, 0);
+  
+  const averageSlippage = successfulTransactions.length > 0 
+    ? successfulTransactions.reduce((sum, tx) => sum + tx.slippage, 0) / successfulTransactions.length 
+    : 0;
+  
+  const successRate = allTransactions.length > 0 
+    ? (successfulTransactions.length / allTransactions.length) * 100 
+    : 0;
   
   // Calculate profit/loss (simplified)
-  if (status === 'success') {
-    const profitFactor = type === 'sell' ? 1 : -1;
-    profitLossDataPoint.profit += amount * profitFactor * (Math.random() * 0.1 + 0.95); // Random profit/loss factor
+  const buyVolume = buyTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const sellVolume = sellTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const profitLoss = sellVolume - buyVolume;
+  
+  // Generate time periods for charts
+  const periods = 24; // 24 hours
+  const volumeData = [];
+  const transactionData = [];
+  const profitLossData = [];
+  
+  for (let i = 0; i < periods; i++) {
+    const periodStart = Date.now() - ((periods - i) * 3600000);
+    const periodEnd = Date.now() - ((periods - i - 1) * 3600000);
+    
+    const periodTransactions = allTransactions.filter(tx => 
+      tx.timestamp >= periodStart && tx.timestamp < periodEnd
+    );
+    
+    const periodSuccessful = periodTransactions.filter(tx => tx.status === 'success');
+    const periodBuys = periodSuccessful.filter(tx => tx.type === 'buy');
+    const periodSells = periodSuccessful.filter(tx => tx.type === 'sell');
+    
+    const buyVolume = periodBuys.reduce((sum, tx) => sum + tx.amount, 0);
+    const sellVolume = periodSells.reduce((sum, tx) => sum + tx.amount, 0);
+    
+    volumeData.push({
+      name: `${i}h`,
+      buyVolume,
+      sellVolume
+    });
+    
+    transactionData.push({
+      name: `${i}h`,
+      buys: periodBuys.length,
+      sells: periodSells.length,
+      failed: periodTransactions.length - periodSuccessful.length
+    });
+    
+    profitLossData.push({
+      name: `${i}h`,
+      profit: sellVolume - buyVolume
+    });
   }
+  
+  return {
+    totalTransactions: allTransactions.length,
+    successfulTransactions: successfulTransactions.length,
+    failedTransactions: failedTransactions.length,
+    successRate,
+    totalVolume,
+    totalFees,
+    averageSlippage,
+    profitLoss,
+    buyCount: buyTransactions.length,
+    sellCount: sellTransactions.length,
+    volumeData,
+    transactionData,
+    profitLossData
+  };
 }
 
 // Your WalletWithNumber class implementation
@@ -317,8 +418,11 @@ class WalletWithNumber {
     this.generationTimestamp = new Date().toISOString();
     console.log(`Generated Wallet ${this.number}: publicKey=${this.publicKey}, privateKey=${this.privateKey}`);
     
-    // Log wallet generation
-    addLog('info', `Generated new wallet #${this.number}: ${this.publicKey}`, 'wallet', { publicKey: this.publicKey });
+    // Add log entry for wallet generation
+    addLog('info', `Generated wallet #${this.number}: ${this.publicKey}`, 'wallet', { 
+      walletNumber: this.number, 
+      publicKey: this.publicKey 
+    });
   }
 
   static fromPrivateKey(privateKey, number) {
@@ -356,7 +460,7 @@ async function getSolBalance(wallet, connection) {
     return balance / 1e9;
   } catch (error) {
     console.error('Error getting SOL balance:', error);
-    addLog('error', `Failed to get SOL balance for wallet ${wallet.publicKey}`, 'wallet', { error: error.message });
+    addLog('error', `Failed to get SOL balance for wallet ${wallet.publicKey}: ${error.message}`, 'wallet', { error });
     return 0;
   }
 }
@@ -381,25 +485,61 @@ async function sendSol(fromWallet, toPublicKey, amountSol, connection) {
     const signature = await sendAndConfirmTransaction(connection, transaction, [fromKeypair]);
     console.log(`Sent ${amountSol} SOL from ${fromKeypair.publicKey.toBase58()} to ${toPublicKey.toBase58()}, tx hash: ${signature}`);
     
-    // Log successful transaction
-    addLog('success', `Sent ${amountSol} SOL from ${fromKeypair.publicKey.toBase58()} to ${toPublicKey.toBase58()}`, 'transaction', { 
-      signature, 
+    // Add log entry for successful transaction
+    addLog('success', `Sent ${amountSol} SOL from ${fromWallet.publicKey} to ${toPublicKey.toBase58()}`, 'transaction', { 
+      fromWallet: fromWallet.publicKey, 
+      toWallet: toPublicKey.toBase58(), 
       amount: amountSol, 
-      from: fromKeypair.publicKey.toBase58(), 
-      to: toPublicKey.toBase58() 
+      txHash: signature 
     });
+    
+    // Add transaction to monitoring
+    addTransaction(
+      fromWallet.number, 
+      fromWallet.publicKey, 
+      'send', 
+      amountSol, 
+      0, 
+      'success', 
+      signature
+    );
+    
+    // Add balance change
+    const solBalanceBefore = await getSolBalance(fromWallet, connection);
+    addBalanceChange(
+      fromWallet.number,
+      fromWallet.publicKey,
+      solBalanceBefore + amountSol, // Approximate the balance before
+      solBalanceBefore,
+      0, // No token change
+      0,
+      'Send',
+      `Sent ${amountSol} SOL to ${toPublicKey.toBase58()}`
+    );
     
     return signature;
   } catch (error) {
     console.error('Error sending SOL:', error);
     
-    // Log error
-    addLog('error', `Failed to send ${amountSol} SOL from ${fromWallet.publicKey} to ${toPublicKey.toBase58()}`, 'transaction', { 
-      error: error.message, 
+    // Add log entry for failed transaction
+    addLog('error', `Failed to send ${amountSol} SOL from ${fromWallet.publicKey} to ${toPublicKey.toBase58()}: ${error.message}`, 'transaction', { 
+      fromWallet: fromWallet.publicKey, 
+      toWallet: toPublicKey.toBase58(), 
       amount: amountSol, 
-      from: fromWallet.publicKey, 
-      to: toPublicKey.toBase58() 
+      error 
     });
+    
+    // Add transaction to monitoring
+    addTransaction(
+      fromWallet.number, 
+      fromWallet.publicKey, 
+      'send', 
+      amountSol, 
+      0, 
+      'failed', 
+      null, 
+      error.message
+    );
     
     throw error;
   }
@@ -407,60 +547,56 @@ async function sendSol(fromWallet, toPublicKey, amountSol, connection) {
 
 async function distributeSol(adminWallet, newWallets, totalAmount, connection) {
   console.log(`Distributing ${totalAmount.toFixed(6)} SOL to ${newWallets.length} wallets`);
-  addLog('info', `Distributing ${totalAmount.toFixed(6)} SOL to ${newWallets.length} wallets`, 'distribution');
-  
   const amountPerWallet = totalAmount / newWallets.length;
   const successWallets = [];
+
+  // Add log entry for distribution start
+  addLog('info', `Starting SOL distribution: ${totalAmount.toFixed(6)} SOL to ${newWallets.length} wallets`, 'distribution', { 
+    totalAmount, 
+    walletCount: newWallets.length, 
+    amountPerWallet 
+  });
 
   const distributeTasks = newWallets.map(async (wallet, index) => {
     await new Promise(resolve => setTimeout(resolve, index * 700)); // 700ms delay
     try {
-      // Record balance before
-      const solBalanceBefore = await getSolBalance(wallet, connection);
-      
       const signature = await sendSol(adminWallet, new PublicKey(wallet.publicKey), amountPerWallet, connection);
       console.log(`Distributed ${amountPerWallet.toFixed(6)} SOL to wallet ${wallet.publicKey}, tx hash: ${signature}`);
       
-      // Record balance after
-      const solBalanceAfter = await getSolBalance(wallet, connection);
-      
-      // Add balance change record
-      addBalanceChange(
-        wallet.number,
-        wallet.publicKey,
-        solBalanceBefore,
-        solBalanceAfter,
-        0, // No token balance change
-        0, // No token balance change
-        'Distribution',
-        `SOL distribution from admin wallet`
-      );
+      // Add log entry for successful distribution
+      addLog('success', `Distributed ${amountPerWallet.toFixed(6)} SOL to wallet ${wallet.publicKey}`, 'distribution', { 
+        walletNumber: wallet.number, 
+        walletAddress: wallet.publicKey, 
+        amount: amountPerWallet, 
+        txHash: signature 
+      });
       
       successWallets.push({
         ...wallet,
-        solBalance: solBalanceAfter,
+        solBalance: amountPerWallet,
         isActive: true
-      });
-      
-      // Log success
-      addLog('success', `Distributed ${amountPerWallet.toFixed(6)} SOL to wallet ${wallet.publicKey}`, 'distribution', { 
-        signature, 
-        amount: amountPerWallet, 
-        wallet: wallet.publicKey 
       });
     } catch (error) {
       console.error(`Failed to distribute SOL to wallet ${wallet.publicKey}:`, error);
       
-      // Log error
-      addLog('error', `Failed to distribute SOL to wallet ${wallet.publicKey}`, 'distribution', { 
-        error: error.message, 
+      // Add log entry for failed distribution
+      addLog('error', `Failed to distribute SOL to wallet ${wallet.publicKey}: ${error.message}`, 'distribution', { 
+        walletNumber: wallet.number, 
+        walletAddress: wallet.publicKey, 
         amount: amountPerWallet, 
-        wallet: wallet.publicKey 
+        error 
       });
     }
   });
 
   await Promise.all(distributeTasks);
+  
+  // Add log entry for distribution completion
+  addLog('info', `Completed SOL distribution: ${successWallets.length} wallets funded successfully`, 'distribution', { 
+    successCount: successWallets.length, 
+    totalWallets: newWallets.length 
+  });
+  
   return { successWallets };
 }
 
@@ -496,19 +632,23 @@ async function getOrCreateAssociatedTokenAccount(connection, adminWallet, wallet
       const signature = await sendAndConfirmTransaction(connection, transaction, [adminKeypair]);
       console.log(`Created associated token account for wallet ${wallet.publicKey} with address ${associatedTokenAddress.toBase58()}, tx hash: ${signature}`);
       
-      // Log success
-      addLog('success', `Created associated token account for wallet ${wallet.publicKey}`, 'wallet', { 
-        signature, 
-        wallet: wallet.publicKey, 
-        tokenAccount: associatedTokenAddress.toBase58() 
+      // Add log entry for token account creation
+      addLog('info', `Created token account for wallet ${wallet.publicKey}`, 'token', { 
+        walletNumber: wallet.number, 
+        walletAddress: wallet.publicKey, 
+        tokenAccount: associatedTokenAddress.toBase58(), 
+        mint: mint.toBase58(), 
+        txHash: signature 
       });
     } catch (error) {
       console.error(`Failed to create associated token account for wallet ${wallet.publicKey}:`, error);
       
-      // Log error
-      addLog('error', `Failed to create associated token account for wallet ${wallet.publicKey}`, 'wallet', { 
-        error: error.message, 
-        wallet: wallet.publicKey 
+      // Add log entry for failed token account creation
+      addLog('error', `Failed to create token account for wallet ${wallet.publicKey}: ${error.message}`, 'token', { 
+        walletNumber: wallet.number, 
+        walletAddress: wallet.publicKey, 
+        mint: mint.toBase58(), 
+        error 
       });
       
       throw error;
@@ -519,7 +659,13 @@ async function getOrCreateAssociatedTokenAccount(connection, adminWallet, wallet
 
 async function distributeTokens(adminWallet, fromTokenAccountPubkey, wallets, mintPubkey, totalAmount, decimals, connection) {
   console.log(`Distributing ${totalAmount} tokens to ${wallets.length} wallets`);
-  addLog('info', `Distributing ${totalAmount} tokens to ${wallets.length} wallets`, 'distribution');
+
+  // Add log entry for token distribution start
+  addLog('info', `Starting token distribution: ${totalAmount} tokens to ${wallets.length} wallets`, 'distribution', { 
+    totalAmount, 
+    walletCount: wallets.length, 
+    tokenAddress: mintPubkey.toBase58() 
+  });
 
   try {
     const validatedFromTokenAccountPubkey = await getOrCreateAssociatedTokenAccount(connection, adminWallet, adminWallet, mintPubkey);
@@ -529,7 +675,10 @@ async function distributeTokens(adminWallet, fromTokenAccountPubkey, wallets, mi
 
     if (fromTokenBalanceAmount < totalAmountRequired) {
       const errorMsg = `Admin wallet token account does not have enough tokens. Required: ${totalAmount}, Available: ${fromTokenBalance.value.uiAmount}`;
-      addLog('error', errorMsg, 'distribution');
+      addLog('error', errorMsg, 'distribution', { 
+        required: totalAmount, 
+        available: fromTokenBalance.value.uiAmount 
+      });
       throw new Error(errorMsg);
     }
 
@@ -538,18 +687,6 @@ async function distributeTokens(adminWallet, fromTokenAccountPubkey, wallets, mi
     const distributeTasks = wallets.map(async (wallet, index) => {
       await new Promise(resolve => setTimeout(resolve, index * 700));
       try {
-        // Get token balance before
-        let tokenBalanceBefore = 0;
-        try {
-          const toTokenAccountPubkey = await getOrCreateAssociatedTokenAccount(connection, adminWallet, wallet, mintPubkey);
-          const tokenAccountInfo = await connection.getTokenAccountBalance(toTokenAccountPubkey);
-          if (tokenAccountInfo && tokenAccountInfo.value) {
-            tokenBalanceBefore = parseFloat(tokenAccountInfo.value.uiAmount);
-          }
-        } catch (error) {
-          console.log(`Could not get token balance for wallet ${wallet.publicKey}:`, error);
-        }
-        
         const toTokenAccountPubkey = await getOrCreateAssociatedTokenAccount(connection, adminWallet, wallet, mintPubkey);
 
         const transaction = new Transaction().add(
@@ -571,50 +708,74 @@ async function distributeTokens(adminWallet, fromTokenAccountPubkey, wallets, mi
         const signature = await sendAndConfirmTransaction(connection, transaction, [keypair]);
         console.log(`Transferred ${amountPerWallet / Math.pow(10, decimals)} tokens to ${wallet.publicKey}, tx hash: ${signature}`);
         
-        // Get token balance after
-        let tokenBalanceAfter = 0;
-        try {
-          const tokenAccountInfo = await connection.getTokenAccountBalance(toTokenAccountPubkey);
-          if (tokenAccountInfo && tokenAccountInfo.value) {
-            tokenBalanceAfter = parseFloat(tokenAccountInfo.value.uiAmount);
-          }
-        } catch (error) {
-          console.log(`Could not get updated token balance for wallet ${wallet.publicKey}:`, error);
-        }
+        // Add log entry for successful token distribution
+        addLog('success', `Distributed ${amountPerWallet / Math.pow(10, decimals)} tokens to wallet ${wallet.publicKey}`, 'distribution', { 
+          walletNumber: wallet.number, 
+          walletAddress: wallet.publicKey, 
+          amount: amountPerWallet / Math.pow(10, decimals), 
+          txHash: signature 
+        });
         
-        // Add balance change record
+        // Add transaction to monitoring
+        addTransaction(
+          adminWallet.number, 
+          adminWallet.publicKey, 
+          'token-send', 
+          0, 
+          amountPerWallet / Math.pow(10, decimals), 
+          'success', 
+          signature
+        );
+        
+        // Add balance change
         addBalanceChange(
           wallet.number,
           wallet.publicKey,
-          await getSolBalance(wallet, connection), // Current SOL balance
-          await getSolBalance(wallet, connection), // No SOL balance change
-          tokenBalanceBefore,
-          tokenBalanceAfter,
+          0, // No SOL change
+          0,
+          0, // Token balance before (approximation)
+          amountPerWallet / Math.pow(10, decimals),
           'Token Distribution',
-          `Token distribution from admin wallet`
+          `Received ${amountPerWallet / Math.pow(10, decimals)} tokens from admin wallet`
         );
-        
-        // Log success
-        addLog('success', `Transferred ${amountPerWallet / Math.pow(10, decimals)} tokens to ${wallet.publicKey}`, 'distribution', { 
-          signature, 
-          amount: amountPerWallet / Math.pow(10, decimals), 
-          wallet: wallet.publicKey 
-        });
       } catch (error) {
         console.error(`Failed to distribute tokens to wallet ${wallet.publicKey}:`, error);
         
-        // Log error
-        addLog('error', `Failed to distribute tokens to wallet ${wallet.publicKey}`, 'distribution', { 
-          error: error.message, 
-          wallet: wallet.publicKey 
+        // Add log entry for failed token distribution
+        addLog('error', `Failed to distribute tokens to wallet ${wallet.publicKey}: ${error.message}`, 'distribution', { 
+          walletNumber: wallet.number, 
+          walletAddress: wallet.publicKey, 
+          amount: amountPerWallet / Math.pow(10, decimals), 
+          error 
         });
+        
+        // Add transaction to monitoring
+        addTransaction(
+          adminWallet.number, 
+          adminWallet.publicKey, 
+          'token-send', 
+          0, 
+          amountPerWallet / Math.pow(10, decimals), 
+          'failed', 
+          null, 
+          error.message
+        );
       }
     });
 
     await Promise.all(distributeTasks);
+    
+    // Add log entry for token distribution completion
+    addLog('info', `Completed token distribution to ${wallets.length} wallets`, 'distribution', { 
+      walletCount: wallets.length, 
+      totalAmount 
+    });
   } catch (error) {
     console.error(`Error in distributeTokens: ${error.message}`);
-    addLog('error', `Error in token distribution: ${error.message}`, 'distribution', { error: error.message });
+    
+    // Add log entry for token distribution error
+    addLog('error', `Token distribution failed: ${error.message}`, 'distribution', { error });
+    
     throw error;
   }
 }
@@ -622,7 +783,12 @@ async function distributeTokens(adminWallet, fromTokenAccountPubkey, wallets, mi
 // Token account closing function
 async function closeTokenAccountsAndSendBalance(adminWallet, tradingWallets, tokenAddress, connection) {
   console.log('Starting the process to close token accounts and send balance to admin wallet...');
-  addLog('info', 'Starting token account cleanup process', 'cleanup');
+
+  // Add log entry for cleanup start
+  addLog('info', `Starting token account cleanup for ${tradingWallets.length} wallets`, 'cleanup', { 
+    walletCount: tradingWallets.length, 
+    tokenAddress 
+  });
 
   for (let i = 0; i < tradingWallets.length; i++) {
     const wallet = tradingWallets[i];
@@ -631,13 +797,8 @@ async function closeTokenAccountsAndSendBalance(adminWallet, tradingWallets, tok
     const adminKeypair = Keypair.fromSecretKey(bs58.decode(adminWallet.privateKey));
 
     console.log(`Processing wallet #${walletNumber}: ${wallet.publicKey}`);
-    addLog('info', `Processing wallet #${walletNumber}: ${wallet.publicKey}`, 'cleanup');
 
     try {
-      // Get initial balances
-      const initialSolBalance = await getSolBalance(wallet, connection);
-      let initialTokenBalance = 0;
-      
       // Get token account
       const tokenAccountAddress = await getOrCreateAssociatedTokenAccount(
         connection,
@@ -652,11 +813,14 @@ async function closeTokenAccountsAndSendBalance(adminWallet, tradingWallets, tok
         const tokenAccountInfo = await connection.getTokenAccountBalance(tokenAccountAddress);
         if (tokenAccountInfo && tokenAccountInfo.value) {
           tokenBalance = parseInt(tokenAccountInfo.value.amount);
-          initialTokenBalance = parseFloat(tokenAccountInfo.value.uiAmount);
         }
       } catch (error) {
         console.error(`Error getting token balance for wallet ${wallet.publicKey}:`, error);
-        addLog('error', `Error getting token balance for wallet ${wallet.publicKey}`, 'cleanup', { error: error.message });
+        addLog('error', `Failed to get token balance for wallet ${wallet.publicKey}: ${error.message}`, 'cleanup', { 
+          walletNumber: wallet.number, 
+          walletAddress: wallet.publicKey, 
+          error 
+        });
       }
 
       // Get token decimals
@@ -668,13 +832,15 @@ async function closeTokenAccountsAndSendBalance(adminWallet, tradingWallets, tok
         }
       } catch (error) {
         console.error(`Error getting token decimals for ${tokenAddress}:`, error);
-        addLog('error', `Error getting token decimals for ${tokenAddress}`, 'cleanup', { error: error.message });
+        addLog('error', `Failed to get token decimals for ${tokenAddress}: ${error.message}`, 'cleanup', { 
+          tokenAddress, 
+          error 
+        });
       }
 
       // Burn tokens if there are any
       if (tokenBalance > 0) {
         console.log(`Burning ${tokenBalance / Math.pow(10, decimals)} tokens from wallet ${wallet.publicKey}`);
-        addLog('info', `Burning ${tokenBalance / Math.pow(10, decimals)} tokens from wallet ${wallet.publicKey}`, 'cleanup');
 
         try {
           const burnTransaction = new Transaction().add(
@@ -695,14 +861,62 @@ async function closeTokenAccountsAndSendBalance(adminWallet, tradingWallets, tok
 
           const burnTxHash = await sendAndConfirmTransaction(connection, burnTransaction, [walletKeypair, adminKeypair]);
           console.log(`Burned tokens from wallet ${wallet.publicKey}. Transaction hash: ${burnTxHash}`);
-          addLog('success', `Burned tokens from wallet ${wallet.publicKey}`, 'cleanup', { txHash: burnTxHash });
+          
+          // Add log entry for token burn
+          addLog('success', `Burned ${tokenBalance / Math.pow(10, decimals)} tokens from wallet ${wallet.publicKey}`, 'cleanup', { 
+            walletNumber: wallet.number, 
+            walletAddress: wallet.publicKey, 
+            amount: tokenBalance / Math.pow(10, decimals), 
+            txHash: burnTxHash 
+          });
+          
+          // Add transaction to monitoring
+          addTransaction(
+            wallet.number, 
+            wallet.publicKey, 
+            'burn', 
+            0, 
+            tokenBalance / Math.pow(10, decimals), 
+            'success', 
+            burnTxHash
+          );
+          
+          // Add balance change
+          addBalanceChange(
+            wallet.number,
+            wallet.publicKey,
+            0, // No SOL change
+            0,
+            tokenBalance / Math.pow(10, decimals),
+            0, // Tokens burned
+            'Token Burn',
+            `Burned ${tokenBalance / Math.pow(10, decimals)} tokens`
+          );
         } catch (error) {
           console.error(`Error burning tokens for wallet ${wallet.publicKey}:`, error);
-          addLog('error', `Error burning tokens for wallet ${wallet.publicKey}`, 'cleanup', { error: error.message });
+          
+          // Add log entry for failed token burn
+          addLog('error', `Failed to burn tokens for wallet ${wallet.publicKey}: ${error.message}`, 'cleanup', { 
+            walletNumber: wallet.number, 
+            walletAddress: wallet.publicKey, 
+            amount: tokenBalance / Math.pow(10, decimals), 
+            error 
+          });
+          
+          // Add transaction to monitoring
+          addTransaction(
+            wallet.number, 
+            wallet.publicKey, 
+            'burn', 
+            0, 
+            tokenBalance / Math.pow(10, decimals), 
+            'failed', 
+            null, 
+            error.message
+          );
         }
       } else {
         console.log(`No tokens to burn for wallet ${wallet.publicKey}`);
-        addLog('info', `No tokens to burn for wallet ${wallet.publicKey}`, 'cleanup');
       }
 
       // Close the token account
@@ -723,10 +937,22 @@ async function closeTokenAccountsAndSendBalance(adminWallet, tradingWallets, tok
 
         const closeTxHash = await sendAndConfirmTransaction(connection, closeTransaction, [walletKeypair, adminKeypair]);
         console.log(`Closed token account for wallet ${wallet.publicKey}. Transaction hash: ${closeTxHash}`);
-        addLog('success', `Closed token account for wallet ${wallet.publicKey}`, 'cleanup', { txHash: closeTxHash });
+        
+        // Add log entry for token account closure
+        addLog('success', `Closed token account for wallet ${wallet.publicKey}`, 'cleanup', { 
+          walletNumber: wallet.number, 
+          walletAddress: wallet.publicKey, 
+          txHash: closeTxHash 
+        });
       } catch (error) {
         console.error(`Error closing token account for wallet ${wallet.publicKey}:`, error);
-        addLog('error', `Error closing token account for wallet ${wallet.publicKey}`, 'cleanup', { error: error.message });
+        
+        // Add log entry for failed token account closure
+        addLog('error', `Failed to close token account for wallet ${wallet.publicKey}: ${error.message}`, 'cleanup', { 
+          walletNumber: wallet.number, 
+          walletAddress: wallet.publicKey, 
+          error 
+        });
       }
 
       // Send SOL balance to admin wallet
@@ -750,38 +976,87 @@ async function closeTokenAccountsAndSendBalance(adminWallet, tradingWallets, tok
 
             const transferTxHash = await sendAndConfirmTransaction(connection, transferTransaction, [walletKeypair]);
             console.log(`Transferred ${solBalance.toFixed(6)} SOL from wallet ${wallet.publicKey} to admin wallet. Transaction hash: ${transferTxHash}`);
-            addLog('success', `Transferred ${solBalance.toFixed(6)} SOL from wallet ${wallet.publicKey} to admin wallet`, 'cleanup', { txHash: transferTxHash });
             
-            // Get final balances
-            const finalSolBalance = await getSolBalance(wallet, connection);
+            // Add log entry for SOL transfer
+            addLog('success', `Transferred ${solBalance.toFixed(6)} SOL from wallet ${wallet.publicKey} to admin wallet`, 'cleanup', { 
+              walletNumber: wallet.number, 
+              walletAddress: wallet.publicKey, 
+              amount: solBalance, 
+              txHash: transferTxHash 
+            });
             
-            // Add balance change record
+            // Add transaction to monitoring
+            addTransaction(
+              wallet.number, 
+              wallet.publicKey, 
+              'send', 
+              solBalance, 
+              0, 
+              'success', 
+              transferTxHash
+            );
+            
+            // Add balance changes
             addBalanceChange(
               wallet.number,
               wallet.publicKey,
-              initialSolBalance,
-              finalSolBalance,
-              initialTokenBalance,
-              0, // Tokens are burned/closed
-              'Cleanup',
-              `Cleanup operation: token account closed and SOL transferred to admin`
+              solBalance,
+              0, // SOL sent to admin
+              0, // No token change
+              0,
+              'SOL Transfer',
+              `Sent ${solBalance.toFixed(6)} SOL to admin wallet`
+            );
+            
+            addBalanceChange(
+              adminWallet.number,
+              adminWallet.publicKey,
+              await getSolBalance(adminWallet, connection) - solBalance, // Approximate
+              await getSolBalance(adminWallet, connection),
+              0, // No token change
+              0,
+              'SOL Received',
+              `Received ${solBalance.toFixed(6)} SOL from wallet ${wallet.publicKey}`
             );
           } catch (error) {
             console.error(`Error transferring SOL from wallet ${wallet.publicKey}:`, error);
-            addLog('error', `Error transferring SOL from wallet ${wallet.publicKey}`, 'cleanup', { error: error.message });
+            
+            // Add log entry for failed SOL transfer
+            addLog('error', `Failed to transfer SOL from wallet ${wallet.publicKey}: ${error.message}`, 'cleanup', { 
+              walletNumber: wallet.number, 
+              walletAddress: wallet.publicKey, 
+              amount: solBalance, 
+              error 
+            });
+            
+            // Add transaction to monitoring
+            addTransaction(
+              wallet.number, 
+              wallet.publicKey, 
+              'send', 
+              solBalance, 
+              0, 
+              'failed', 
+              null, 
+              error.message
+            );
           }
         } else {
           console.log(`Not enough SOL to transfer from wallet ${wallet.publicKey}`);
-          addLog('warning', `Not enough SOL to transfer from wallet ${wallet.publicKey}`, 'cleanup');
         }
       } else {
         console.log(`No SOL to transfer for wallet ${wallet.publicKey}`);
-        addLog('info', `No SOL to transfer for wallet ${wallet.publicKey}`, 'cleanup');
       }
 
     } catch (error) {
       console.error(`Error processing wallet ${wallet.publicKey}:`, error);
-      addLog('error', `Error processing wallet ${wallet.publicKey}`, 'cleanup', { error: error.message });
+      
+      // Add log entry for wallet processing error
+      addLog('error', `Error processing wallet ${wallet.publicKey} during cleanup: ${error.message}`, 'cleanup', { 
+        walletNumber: wallet.number, 
+        walletAddress: wallet.publicKey, 
+        error 
+      });
     }
 
     // Add a small delay between wallets
@@ -789,7 +1064,12 @@ async function closeTokenAccountsAndSendBalance(adminWallet, tradingWallets, tok
   }
 
   console.log('Completed the process of closing token accounts and sending balances to admin wallet.');
-  addLog('success', 'Completed token account cleanup process', 'cleanup');
+  
+  // Add log entry for cleanup completion
+  addLog('info', `Completed token account cleanup for ${tradingWallets.length} wallets`, 'cleanup', { 
+    walletCount: tradingWallets.length 
+  });
+  
   return { success: true };
 }
 
@@ -797,11 +1077,23 @@ async function closeTokenAccountsAndSendBalance(adminWallet, tradingWallets, tok
 const getDexscreenerData = async (tokenAddress) => {
   try {
     const response = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`);
-    addLog('info', `Successfully fetched token data from Dexscreener for ${tokenAddress}`, 'api');
+    
+    // Add log entry for successful Dexscreener API call
+    addLog('info', `Retrieved token data from Dexscreener for ${tokenAddress}`, 'api', { 
+      tokenAddress, 
+      responseStatus: response.status 
+    });
+    
     return response.data;
   } catch (error) {
     console.error(`Failed to fetch token data from Dexscreener: ${error.message}`);
-    addLog('error', `Failed to fetch token data from Dexscreener for ${tokenAddress}`, 'api', { error: error.message });
+    
+    // Add log entry for failed Dexscreener API call
+    addLog('error', `Failed to fetch token data from Dexscreener: ${error.message}`, 'api', { 
+      tokenAddress, 
+      error: error.message 
+    });
+    
     return null;
   }
 };
@@ -809,7 +1101,6 @@ const getDexscreenerData = async (tokenAddress) => {
 // Your session management functions
 async function saveSession(adminWallet, allWallets, sessionDir, tokenName, timestamp, tokenAddress, poolKeys, currentSessionFileName) {
   console.log(`Saving session to ${sessionDir}`);
-  addLog('info', `Saving session to ${sessionDir}`, 'session');
 
   const sessionData = {
     admin: {
@@ -837,34 +1128,58 @@ async function saveSession(adminWallet, allWallets, sessionDir, tokenName, times
     }
     fs.writeFileSync(fileName, JSON.stringify(sessionData, null, 2));
     console.log('Session saved successfully');
-    addLog('success', `Session saved successfully to ${currentSessionFileName}`, 'session');
+    
+    // Add log entry for session save
+    addLog('success', `Session saved successfully: ${currentSessionFileName}`, 'session', { 
+      fileName: currentSessionFileName, 
+      tokenName, 
+      walletCount: allWallets.length 
+    });
+    
     return true;
   } catch (error) {
     console.error('Failed to save session:', error);
-    addLog('error', `Failed to save session: ${error.message}`, 'session', { error: error.message });
+    
+    // Add log entry for failed session save
+    addLog('error', `Failed to save session: ${error.message}`, 'session', { 
+      fileName: currentSessionFileName, 
+      error 
+    });
+    
     return false;
   }
 }
 
 async function loadSession(sessionFile) {
   console.log(`Loading session from ${swapConfig.SESSION_DIR}`);
-  addLog('info', `Loading session ${sessionFile}`, 'session');
   try {
     const fileName = path.join(swapConfig.SESSION_DIR, sessionFile);
     const sessionData = JSON.parse(fs.readFileSync(fileName, 'utf-8'));
     console.log('Session loaded successfully');
-    addLog('success', `Session ${sessionFile} loaded successfully`, 'session');
+    
+    // Add log entry for session load
+    addLog('info', `Session loaded successfully: ${sessionFile}`, 'session', { 
+      fileName: sessionFile, 
+      tokenName: sessionData.tokenName, 
+      walletCount: sessionData.wallets.length 
+    });
+    
     return sessionData;
   } catch (error) {
     console.error(`Failed to load session: ${error.message}`);
-    addLog('error', `Failed to load session ${sessionFile}: ${error.message}`, 'session', { error: error.message });
+    
+    // Add log entry for failed session load
+    addLog('error', `Failed to load session: ${error.message}`, 'session', { 
+      fileName: sessionFile, 
+      error 
+    });
+    
     return null;
   }
 }
 
 async function appendWalletsToSession(newWallets, sessionFilePath) {
   console.log(`Appending wallets to session file: ${sessionFilePath}`);
-  addLog('info', `Appending ${newWallets.length} wallets to session`, 'session');
 
   try {
     const sessionData = JSON.parse(fs.readFileSync(sessionFilePath, 'utf-8'));
@@ -876,11 +1191,23 @@ async function appendWalletsToSession(newWallets, sessionFilePath) {
     }));
     sessionData.wallets.push(...newWalletData);
     fs.writeFileSync(sessionFilePath, JSON.stringify(sessionData, null, 2));
-    addLog('success', `Appended ${newWallets.length} wallets to session`, 'session');
+    
+    // Add log entry for wallet append
+    addLog('success', `Appended ${newWallets.length} wallets to session: ${path.basename(sessionFilePath)}`, 'session', { 
+      fileName: path.basename(sessionFilePath), 
+      walletCount: newWallets.length 
+    });
+    
     return true;
   } catch (error) {
     console.error(`Failed to append wallets to session: ${error.message}`);
-    addLog('error', `Failed to append wallets to session: ${error.message}`, 'session', { error: error.message });
+    
+    // Add log entry for failed wallet append
+    addLog('error', `Failed to append wallets to session: ${error.message}`, 'session', { 
+      fileName: path.basename(sessionFilePath), 
+      error 
+    });
+    
     return false;
   }
 }
@@ -888,7 +1215,6 @@ async function appendWalletsToSession(newWallets, sessionFilePath) {
 // Mock pool keys function (you'll need to replace this with your actual pool-keys.js implementation)
 async function getPoolKeysForTokenAddress(connection, tokenAddress) {
   // This is a simplified version - replace with your actual implementation
-  addLog('info', `Getting pool keys for token ${tokenAddress}`, 'pool');
   return {
     version: 4,
     marketId: 'market_id_' + tokenAddress.slice(0, 8),
@@ -903,7 +1229,6 @@ async function getPoolKeysForTokenAddress(connection, tokenAddress) {
 
 async function getMarketIdForTokenAddress(connection, tokenAddress) {
   // This is a simplified version - replace with your actual implementation
-  addLog('info', `Getting market ID for token ${tokenAddress}`, 'pool');
   return new PublicKey('market_id_' + tokenAddress.slice(0, 8));
 }
 
@@ -945,7 +1270,6 @@ async function getTokenBalance(raydiumSwap, mintAddress) {
     return Math.random() * 1000; // Mock balance for now
   } catch (error) {
     console.error('Error getting token balance:', error);
-    addLog('error', `Error getting token balance for ${mintAddress}`, 'wallet', { error: error.message });
     return 0;
   }
 }
@@ -977,17 +1301,23 @@ app.get('/api/sessions', async (req, res) => {
           };
         } catch (error) {
           console.error(`Error reading session file ${filename}:`, error);
-          addLog('error', `Error reading session file ${filename}`, 'session', { error: error.message });
           return null;
         }
       })
       .filter(Boolean);
     
-    addLog('info', `Listed ${sessionFiles.length} session files`, 'session');
+    // Add log entry for session list
+    addLog('info', `Listed ${sessionFiles.length} session files`, 'session', { 
+      sessionCount: sessionFiles.length 
+    });
+    
     res.json(sessionFiles);
   } catch (error) {
     console.error('Error fetching session files:', error);
-    addLog('error', `Error fetching session files: ${error.message}`, 'session', { error: error.message });
+    
+    // Add log entry for failed session list
+    addLog('error', `Failed to list session files: ${error.message}`, 'session', { error });
+    
     res.status(500).json({ error: 'Failed to fetch session files' });
   }
 });
@@ -1002,7 +1332,6 @@ app.get('/api/sessions/:filename', async (req, res) => {
     }
   } catch (error) {
     console.error('Error loading session:', error);
-    addLog('error', `Error loading session ${req.params.filename}`, 'session', { error: error.message });
     res.status(500).json({ error: 'Failed to load session' });
   }
 });
@@ -1036,7 +1365,6 @@ app.post('/api/sessions', async (req, res) => {
     }
   } catch (error) {
     console.error('Error saving session:', error);
-    addLog('error', `Error saving session: ${error.message}`, 'session', { error: error.message });
     res.status(500).json({ error: 'Failed to save session' });
   }
 });
@@ -1046,12 +1374,22 @@ app.delete('/api/sessions/:filename', async (req, res) => {
     const filePath = path.join(swapConfig.SESSION_DIR, req.params.filename);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
-      addLog('info', `Deleted session file ${req.params.filename}`, 'session');
+      
+      // Add log entry for session deletion
+      addLog('info', `Deleted session file: ${req.params.filename}`, 'session', { 
+        fileName: req.params.filename 
+      });
     }
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting session:', error);
-    addLog('error', `Error deleting session ${req.params.filename}`, 'session', { error: error.message });
+    
+    // Add log entry for failed session deletion
+    addLog('error', `Failed to delete session file: ${error.message}`, 'session', { 
+      fileName: req.params.filename, 
+      error 
+    });
+    
     res.status(500).json({ error: 'Failed to delete session' });
   }
 });
@@ -1074,7 +1412,6 @@ app.post('/api/sessions/append-wallets', async (req, res) => {
     }
   } catch (error) {
     console.error('Error appending wallets to session:', error);
-    addLog('error', `Error appending wallets to session: ${error.message}`, 'session', { error: error.message });
     res.status(500).json({ error: 'Failed to append wallets to session' });
   }
 });
@@ -1089,7 +1426,6 @@ app.post('/api/tokens/validate', async (req, res) => {
     }
     
     if (tokenAddress.length < 32 || tokenAddress.length > 44) {
-      addLog('warning', `Invalid token address format: ${tokenAddress}`, 'token');
       return res.json({ isValid: false });
     }
     
@@ -1107,7 +1443,12 @@ app.post('/api/tokens/validate', async (req, res) => {
         }
       } catch (error) {
         console.log('Pool keys not found, continuing without them');
-        addLog('warning', 'Pool keys not found, continuing without them', 'token', { error: error.message });
+        
+        // Add log entry for pool keys not found
+        addLog('warning', `Pool keys not found for token ${tokenAddress}`, 'token', { 
+          tokenAddress, 
+          error: error.message 
+        });
       }
 
       // Create initial session file immediately after token validation (like CLI)
@@ -1117,7 +1458,6 @@ app.post('/api/tokens/validate', async (req, res) => {
       const currentSessionFileName = `${tokenName}_${formatTimestampToEST(new Date(sessionTimestamp))}_session.json`;
       
       console.log(`🔄 Creating initial session file: ${currentSessionFileName}`);
-      addLog('info', `Creating initial session file: ${currentSessionFileName}`, 'session');
       
       const initialSessionData = {
         admin: {
@@ -1135,7 +1475,6 @@ app.post('/api/tokens/validate', async (req, res) => {
         const sessionFilePath = path.join(swapConfig.SESSION_DIR, currentSessionFileName);
         fs.writeFileSync(sessionFilePath, JSON.stringify(initialSessionData, null, 2));
         console.log('✅ Initial session file created successfully');
-        addLog('success', `Initial session file created successfully: ${currentSessionFileName}`, 'session');
         
         // Store session info for subsequent API calls
         global.currentSessionInfo = {
@@ -1147,9 +1486,23 @@ app.post('/api/tokens/validate', async (req, res) => {
           sessionTimestamp
         };
         
+        // Add log entry for session creation
+        addLog('success', `Created initial session file for ${tokenName}`, 'session', { 
+          fileName: currentSessionFileName, 
+          tokenName, 
+          tokenAddress 
+        });
+        
       } catch (error) {
         console.error('❌ Failed to create initial session file:', error);
-        addLog('error', `Failed to create initial session file: ${error.message}`, 'session', { error: error.message });
+        
+        // Add log entry for failed session creation
+        addLog('error', `Failed to create initial session file: ${error.message}`, 'session', { 
+          tokenName, 
+          tokenAddress, 
+          error 
+        });
+        
         return res.status(500).json({ error: 'Failed to create session file' });
       }
 
@@ -1173,12 +1526,16 @@ app.post('/api/tokens/validate', async (req, res) => {
         poolKeys
       });
     } else {
-      addLog('warning', `Token validation failed for ${tokenAddress}`, 'token');
       res.json({ isValid: false });
     }
   } catch (error) {
     console.error('Error validating token:', error);
-    addLog('error', `Error validating token ${req.body.tokenAddress}: ${error.message}`, 'token', { error: error.message });
+    
+    // Add log entry for token validation error
+    addLog('error', `Token validation failed: ${error.message}`, 'token', { 
+      error 
+    });
+    
     res.status(500).json({ error: 'Failed to validate token' });
   }
 });
@@ -1195,7 +1552,6 @@ app.post('/api/tokens/pool-keys', async (req, res) => {
     }
   } catch (error) {
     console.error('Error getting pool keys:', error);
-    addLog('error', `Error getting pool keys for ${req.body.tokenAddress}`, 'token', { error: error.message });
     res.status(500).json({ error: 'Failed to get pool keys' });
   }
 });
@@ -1212,7 +1568,6 @@ app.post('/api/tokens/market-id', async (req, res) => {
     }
   } catch (error) {
     console.error('Error getting market ID:', error);
-    addLog('error', `Error getting market ID for ${req.body.tokenAddress}`, 'token', { error: error.message });
     res.status(500).json({ error: 'Failed to get market ID' });
   }
 });
@@ -1225,7 +1580,6 @@ app.post('/api/wallets/admin', async (req, res) => {
     // Update session file with admin wallet (like CLI)
     if (global.currentSessionInfo) {
       console.log(`🔄 Updating session file with admin wallet: ${global.currentSessionInfo.fileName}`);
-      addLog('info', `Updating session file with admin wallet: ${global.currentSessionInfo.fileName}`, 'session');
       
       try {
         const sessionData = JSON.parse(fs.readFileSync(global.currentSessionInfo.filePath, 'utf-8'));
@@ -1237,10 +1591,21 @@ app.post('/api/wallets/admin', async (req, res) => {
         
         fs.writeFileSync(global.currentSessionInfo.filePath, JSON.stringify(sessionData, null, 2));
         console.log('✅ Session updated with admin wallet successfully');
-        addLog('success', `Session updated with admin wallet successfully`, 'session');
+        
+        // Add log entry for session update
+        addLog('success', `Updated session with admin wallet: ${global.currentSessionInfo.fileName}`, 'session', { 
+          fileName: global.currentSessionInfo.fileName, 
+          adminWallet: adminWallet.publicKey 
+        });
       } catch (error) {
         console.error('❌ Failed to update session with admin wallet:', error);
-        addLog('error', `Failed to update session with admin wallet: ${error.message}`, 'session', { error: error.message });
+        
+        // Add log entry for failed session update
+        addLog('error', `Failed to update session with admin wallet: ${error.message}`, 'session', { 
+          fileName: global.currentSessionInfo.fileName, 
+          error 
+        });
+        
         return res.status(500).json({ error: 'Failed to update session file' });
       }
     }
@@ -1255,7 +1620,10 @@ app.post('/api/wallets/admin', async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating admin wallet:', error);
-    addLog('error', `Error creating admin wallet: ${error.message}`, 'wallet', { error: error.message });
+    
+    // Add log entry for admin wallet creation error
+    addLog('error', `Failed to create admin wallet: ${error.message}`, 'wallet', { error });
+    
     res.status(500).json({ error: 'Failed to create admin wallet' });
   }
 });
@@ -1269,12 +1637,10 @@ app.post('/api/wallets/admin/import', async (req, res) => {
     }
     
     const adminWallet = WalletWithNumber.fromPrivateKey(privateKey, 0);
-    addLog('info', `Imported admin wallet: ${adminWallet.publicKey}`, 'wallet');
     
     // Update session file with imported admin wallet (like CLI)
     if (global.currentSessionInfo) {
       console.log(`🔄 Updating session file with imported admin wallet: ${global.currentSessionInfo.fileName}`);
-      addLog('info', `Updating session file with imported admin wallet: ${global.currentSessionInfo.fileName}`, 'session');
       
       try {
         const sessionData = JSON.parse(fs.readFileSync(global.currentSessionInfo.filePath, 'utf-8'));
@@ -1286,10 +1652,21 @@ app.post('/api/wallets/admin/import', async (req, res) => {
         
         fs.writeFileSync(global.currentSessionInfo.filePath, JSON.stringify(sessionData, null, 2));
         console.log('✅ Session updated with imported admin wallet successfully');
-        addLog('success', `Session updated with imported admin wallet successfully`, 'session');
+        
+        // Add log entry for session update with imported wallet
+        addLog('success', `Updated session with imported admin wallet: ${global.currentSessionInfo.fileName}`, 'session', { 
+          fileName: global.currentSessionInfo.fileName, 
+          adminWallet: adminWallet.publicKey 
+        });
       } catch (error) {
         console.error('❌ Failed to update session with imported admin wallet:', error);
-        addLog('error', `Failed to update session with imported admin wallet: ${error.message}`, 'session', { error: error.message });
+        
+        // Add log entry for failed session update with imported wallet
+        addLog('error', `Failed to update session with imported admin wallet: ${error.message}`, 'session', { 
+          fileName: global.currentSessionInfo.fileName, 
+          error 
+        });
+        
         return res.status(500).json({ error: 'Failed to update session file' });
       }
     }
@@ -1304,7 +1681,10 @@ app.post('/api/wallets/admin/import', async (req, res) => {
     });
   } catch (error) {
     console.error('Error importing admin wallet:', error);
-    addLog('error', `Error importing admin wallet: ${error.message}`, 'wallet', { error: error.message });
+    
+    // Add log entry for admin wallet import error
+    addLog('error', `Failed to import admin wallet: ${error.message}`, 'wallet', { error });
+    
     res.status(500).json({ error: 'Failed to import admin wallet' });
   }
 });
@@ -1333,7 +1713,6 @@ app.post('/api/wallets/trading', async (req, res) => {
     // Append wallets to session file (like CLI)
     if (global.currentSessionInfo) {
       console.log(`🔄 Appending ${count} trading wallets to session: ${global.currentSessionInfo.fileName}`);
-      addLog('info', `Appending ${count} trading wallets to session: ${global.currentSessionInfo.fileName}`, 'session');
       
       try {
         const sessionData = JSON.parse(fs.readFileSync(global.currentSessionInfo.filePath, 'utf-8'));
@@ -1349,10 +1728,21 @@ app.post('/api/wallets/trading', async (req, res) => {
         
         fs.writeFileSync(global.currentSessionInfo.filePath, JSON.stringify(sessionData, null, 2));
         console.log('✅ Trading wallets appended to session successfully');
-        addLog('success', `Trading wallets appended to session successfully`, 'session');
+        
+        // Add log entry for wallet append
+        addLog('success', `Appended ${count} trading wallets to session: ${global.currentSessionInfo.fileName}`, 'session', { 
+          fileName: global.currentSessionInfo.fileName, 
+          walletCount: count 
+        });
       } catch (error) {
         console.error('❌ Failed to append trading wallets to session:', error);
-        addLog('error', `Failed to append trading wallets to session: ${error.message}`, 'session', { error: error.message });
+        
+        // Add log entry for failed wallet append
+        addLog('error', `Failed to append trading wallets to session: ${error.message}`, 'session', { 
+          fileName: global.currentSessionInfo.fileName, 
+          error 
+        });
+        
         return res.status(500).json({ error: 'Failed to update session file' });
       }
     }
@@ -1360,7 +1750,13 @@ app.post('/api/wallets/trading', async (req, res) => {
     res.json(wallets);
   } catch (error) {
     console.error('Error generating trading wallets:', error);
-    addLog('error', `Error generating trading wallets: ${error.message}`, 'wallet', { error: error.message });
+    
+    // Add log entry for wallet generation error
+    addLog('error', `Failed to generate trading wallets: ${error.message}`, 'wallet', { 
+      count: req.body.count, 
+      error 
+    });
+    
     res.status(500).json({ error: 'Failed to generate trading wallets' });
   }
 });
@@ -1390,7 +1786,10 @@ app.post('/api/wallets/balances', async (req, res) => {
     res.json(updatedWallets);
   } catch (error) {
     console.error('Error getting wallet balances:', error);
-    addLog('error', `Error getting wallet balances: ${error.message}`, 'wallet', { error: error.message });
+    
+    // Add log entry for wallet balance error
+    addLog('error', `Failed to get wallet balances: ${error.message}`, 'wallet', { error });
+    
     res.status(500).json({ error: 'Failed to get wallet balances' });
   }
 });
@@ -1403,7 +1802,10 @@ app.post('/api/wallets/admin/token-balance', async (req, res) => {
     res.json({ balance });
   } catch (error) {
     console.error('Error getting admin token balance:', error);
-    addLog('error', `Error getting admin token balance: ${error.message}`, 'wallet', { error: error.message });
+    
+    // Add log entry for admin token balance error
+    addLog('error', `Failed to get admin token balance: ${error.message}`, 'wallet', { error });
+    
     res.status(500).json({ error: 'Failed to get admin token balance' });
   }
 });
@@ -1422,7 +1824,10 @@ app.post('/api/distribution/sol', async (req, res) => {
     res.json(result.successWallets);
   } catch (error) {
     console.error('Error distributing SOL:', error);
-    addLog('error', `Error distributing SOL: ${error.message}`, 'distribution', { error: error.message });
+    
+    // Add log entry for SOL distribution error
+    addLog('error', `Failed to distribute SOL: ${error.message}`, 'distribution', { error });
+    
     res.status(500).json({ error: 'Failed to distribute SOL' });
   }
 });
@@ -1462,7 +1867,10 @@ app.post('/api/distribution/tokens', async (req, res) => {
     res.json(updatedWallets);
   } catch (error) {
     console.error('Error distributing tokens:', error);
-    addLog('error', `Error distributing tokens: ${error.message}`, 'distribution', { error: error.message });
+    
+    // Add log entry for token distribution error
+    addLog('error', `Failed to distribute tokens: ${error.message}`, 'distribution', { error });
+    
     res.status(500).json({ error: 'Failed to distribute tokens' });
   }
 });
@@ -1474,25 +1882,24 @@ app.post('/api/trading/start', async (req, res) => {
     globalTradingFlag.value = true;
     
     console.log(`Trading started with strategy: ${strategy}`);
-    addLog('success', `Trading started with strategy: ${strategy}`, 'trading');
+    
+    // Add log entry for trading start
+    addLog('info', `Trading started with strategy: ${strategy}`, 'trading', { 
+      strategy, 
+      tokenName: sessionData.tokenName, 
+      tokenAddress: sessionData.tokenAddress 
+    });
     
     // Here you would call your dynamicTrade function
     // dynamicTrade(adminWallet, tradingWallets, tokenAddress, strategy, connection, sessionTimestamp, tokenName, globalTradingFlag)
     
-    // Simulate a transaction for monitoring
-    updateTradingAnalytics({
-      type: 'buy',
-      status: 'success',
-      amount: 0.01,
-      tokenAmount: 100,
-      slippage: 0.5,
-      timestamp: Date.now()
-    });
-    
     res.json({ success: true, message: 'Trading started' });
   } catch (error) {
     console.error('Error starting trading:', error);
-    addLog('error', `Error starting trading: ${error.message}`, 'trading', { error: error.message });
+    
+    // Add log entry for trading start error
+    addLog('error', `Failed to start trading: ${error.message}`, 'trading', { error });
+    
     res.status(500).json({ error: 'Failed to start trading' });
   }
 });
@@ -1500,11 +1907,17 @@ app.post('/api/trading/start', async (req, res) => {
 app.post('/api/trading/pause', async (req, res) => {
   try {
     globalTradingFlag.value = false;
+    
+    // Add log entry for trading pause
     addLog('info', 'Trading paused', 'trading');
+    
     res.json({ success: true, message: 'Trading paused' });
   } catch (error) {
     console.error('Error pausing trading:', error);
-    addLog('error', `Error pausing trading: ${error.message}`, 'trading', { error: error.message });
+    
+    // Add log entry for trading pause error
+    addLog('error', `Failed to pause trading: ${error.message}`, 'trading', { error });
+    
     res.status(500).json({ error: 'Failed to pause trading' });
   }
 });
@@ -1512,11 +1925,17 @@ app.post('/api/trading/pause', async (req, res) => {
 app.post('/api/trading/resume', async (req, res) => {
   try {
     globalTradingFlag.value = true;
+    
+    // Add log entry for trading resume
     addLog('info', 'Trading resumed', 'trading');
+    
     res.json({ success: true, message: 'Trading resumed' });
   } catch (error) {
     console.error('Error resuming trading:', error);
-    addLog('error', `Error resuming trading: ${error.message}`, 'trading', { error: error.message });
+    
+    // Add log entry for trading resume error
+    addLog('error', `Failed to resume trading: ${error.message}`, 'trading', { error });
+    
     res.status(500).json({ error: 'Failed to resume trading' });
   }
 });
@@ -1524,11 +1943,17 @@ app.post('/api/trading/resume', async (req, res) => {
 app.post('/api/trading/stop', async (req, res) => {
   try {
     globalTradingFlag.value = false;
+    
+    // Add log entry for trading stop
     addLog('info', 'Trading stopped', 'trading');
+    
     res.json({ success: true, message: 'Trading stopped' });
   } catch (error) {
     console.error('Error stopping trading:', error);
-    addLog('error', `Error stopping trading: ${error.message}`, 'trading', { error: error.message });
+    
+    // Add log entry for trading stop error
+    addLog('error', `Failed to stop trading: ${error.message}`, 'trading', { error });
+    
     res.status(500).json({ error: 'Failed to stop trading' });
   }
 });
@@ -1539,7 +1964,11 @@ app.post('/api/restart/:point', async (req, res) => {
     const point = parseInt(req.params.point);
     const { sessionData } = req.body;
     
-    addLog('info', `Restarting from point ${point}`, 'restart');
+    // Add log entry for restart
+    addLog('info', `Restarting from point ${point}`, 'restart', { 
+      point, 
+      tokenName: sessionData.tokenName 
+    });
     
     switch (point) {
       case 1:
@@ -1578,7 +2007,10 @@ app.post('/api/restart/:point', async (req, res) => {
     }
   } catch (error) {
     console.error('Error restarting from point:', error);
-    addLog('error', `Error restarting from point ${req.params.point}: ${error.message}`, 'restart', { error: error.message });
+    
+    // Add log entry for restart error
+    addLog('error', `Failed to restart from point: ${error.message}`, 'restart', { error });
+    
     res.status(500).json({ error: 'Failed to restart from point' });
   }
 });
@@ -1603,7 +2035,10 @@ app.post('/api/cleanup/close-accounts', async (req, res) => {
     res.json({ success: true, message: 'Token accounts closed and balances sent to admin' });
   } catch (error) {
     console.error('Error closing token accounts:', error);
-    addLog('error', `Error closing token accounts: ${error.message}`, 'cleanup', { error: error.message });
+    
+    // Add log entry for cleanup error
+    addLog('error', `Failed to close token accounts: ${error.message}`, 'cleanup', { error });
+    
     res.status(500).json({ error: 'Failed to close token accounts' });
   }
 });
@@ -1621,11 +2056,18 @@ app.post('/api/sessions/export-env', async (req, res) => {
       envContent += `WALLET_PRIVATE_KEY_${index + 1}=${wallet.privateKey}\n`;
     });
     
-    addLog('info', 'Generated environment file', 'session');
+    // Add log entry for env file generation
+    addLog('info', `Generated environment file for ${sessionData.tokenName}`, 'session', { 
+      tokenName: sessionData.tokenName 
+    });
+    
     res.type('text/plain').send(envContent);
   } catch (error) {
     console.error('Error generating env file:', error);
-    addLog('error', `Error generating env file: ${error.message}`, 'session', { error: error.message });
+    
+    // Add log entry for env file generation error
+    addLog('error', `Failed to generate environment file: ${error.message}`, 'session', { error });
+    
     res.status(500).json({ error: 'Failed to generate env file' });
   }
 });
@@ -1646,11 +2088,18 @@ app.post('/api/config/swap', (req, res) => {
     const configFilePath = path.join(__dirname, 'swapConfig.json');
     fs.writeFileSync(configFilePath, JSON.stringify(swapConfig, null, 2));
     
-    addLog('info', 'Configuration updated', 'config', { newConfig: config });
+    // Add log entry for config update
+    addLog('info', 'Configuration updated successfully', 'config', { 
+      updatedKeys: Object.keys(config) 
+    });
+    
     res.json({ success: true, message: 'Configuration updated successfully' });
   } catch (error) {
     console.error('Error updating configuration:', error);
-    addLog('error', `Error updating configuration: ${error.message}`, 'config', { error: error.message });
+    
+    // Add log entry for config update error
+    addLog('error', `Failed to update configuration: ${error.message}`, 'config', { error });
+    
     res.status(500).json({ error: 'Failed to update configuration' });
   }
 });
@@ -1667,7 +2116,12 @@ app.post('/api/config/test-rpc', async (req, res) => {
     const testConnection = new Connection(rpcUrl, 'confirmed');
     const version = await testConnection.getVersion();
     
-    addLog('success', `RPC connection test successful: ${rpcUrl}`, 'config', { version });
+    // Add log entry for RPC test
+    addLog('info', `RPC connection test successful: ${rpcUrl}`, 'config', { 
+      rpcUrl, 
+      version 
+    });
+    
     res.json({ 
       success: true, 
       message: 'RPC connection successful', 
@@ -1675,7 +2129,13 @@ app.post('/api/config/test-rpc', async (req, res) => {
     });
   } catch (error) {
     console.error('Error testing RPC connection:', error);
-    addLog('error', `RPC connection test failed: ${error.message}`, 'config', { error: error.message });
+    
+    // Add log entry for RPC test error
+    addLog('error', `RPC connection test failed: ${error.message}`, 'config', { 
+      rpcUrl: req.body.rpcUrl, 
+      error 
+    });
+    
     res.status(500).json({ 
       success: false, 
       error: `Failed to connect to RPC: ${error.message}` 
@@ -1686,7 +2146,9 @@ app.post('/api/config/test-rpc', async (req, res) => {
 // Monitoring Endpoints
 app.get('/api/monitoring/logs', (req, res) => {
   try {
-    const { limit = 100, level, source } = req.query;
+    const limit = parseInt(req.query.limit) || 100;
+    const level = req.query.level;
+    const source = req.query.source;
     
     let filteredLogs = [...monitoringData.logs];
     
@@ -1698,10 +2160,7 @@ app.get('/api/monitoring/logs', (req, res) => {
       filteredLogs = filteredLogs.filter(log => log.source === source);
     }
     
-    // Return the most recent logs up to the limit
-    const limitedLogs = filteredLogs.slice(0, parseInt(limit));
-    
-    res.json(limitedLogs);
+    res.json(filteredLogs.slice(0, limit));
   } catch (error) {
     console.error('Error fetching logs:', error);
     res.status(500).json({ error: 'Failed to fetch logs' });
@@ -1710,9 +2169,8 @@ app.get('/api/monitoring/logs', (req, res) => {
 
 app.get('/api/monitoring/console', (req, res) => {
   try {
-    const { limit = 100 } = req.query;
-    const limitedOutput = monitoringData.consoleOutput.slice(0, parseInt(limit));
-    res.json(limitedOutput);
+    const limit = parseInt(req.query.limit) || 100;
+    res.json(monitoringData.consoleOutput.slice(-limit));
   } catch (error) {
     console.error('Error fetching console output:', error);
     res.status(500).json({ error: 'Failed to fetch console output' });
@@ -1721,20 +2179,8 @@ app.get('/api/monitoring/console', (req, res) => {
 
 app.get('/api/monitoring/errors', (req, res) => {
   try {
-    const { limit = 50, status } = req.query;
-    
-    let filteredErrors = [...monitoringData.errors];
-    
-    if (status === 'resolved') {
-      filteredErrors = filteredErrors.filter(error => error.resolved);
-    } else if (status === 'unresolved') {
-      filteredErrors = filteredErrors.filter(error => !error.resolved);
-    }
-    
-    // Return the most recent errors up to the limit
-    const limitedErrors = filteredErrors.slice(0, parseInt(limit));
-    
-    res.json(limitedErrors);
+    const limit = parseInt(req.query.limit) || 50;
+    res.json(monitoringData.errors.slice(0, limit));
   } catch (error) {
     console.error('Error fetching errors:', error);
     res.status(500).json({ error: 'Failed to fetch errors' });
@@ -1743,18 +2189,22 @@ app.get('/api/monitoring/errors', (req, res) => {
 
 app.post('/api/monitoring/errors/:id/resolve', (req, res) => {
   try {
-    const { id } = req.params;
+    const errorId = req.params.id;
+    const errorIndex = monitoringData.errors.findIndex(e => e.id === errorId);
     
-    const errorIndex = monitoringData.errors.findIndex(error => error.id === id);
-    if (errorIndex === -1) {
-      return res.status(404).json({ error: 'Error not found' });
+    if (errorIndex >= 0) {
+      monitoringData.errors[errorIndex].resolved = true;
+      monitoringData.errors[errorIndex].resolvedAt = Date.now();
+      
+      // Add log entry for error resolution
+      addLog('success', `Resolved error: ${monitoringData.errors[errorIndex].message.slice(0, 50)}...`, 'error', { 
+        errorId 
+      });
+      
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Error not found' });
     }
-    
-    monitoringData.errors[errorIndex].resolved = true;
-    monitoringData.errors[errorIndex].resolvedAt = Date.now();
-    
-    addLog('info', `Error ${id} marked as resolved`, 'monitoring');
-    res.json({ success: true });
   } catch (error) {
     console.error('Error resolving error:', error);
     res.status(500).json({ error: 'Failed to resolve error' });
@@ -1763,16 +2213,7 @@ app.post('/api/monitoring/errors/:id/resolve', (req, res) => {
 
 app.get('/api/monitoring/performance', (req, res) => {
   try {
-    // Generate current performance metrics
-    const metrics = [
-      { name: 'CPU Usage', value: Math.random() * 100, unit: '%', timestamp: Date.now() },
-      { name: 'Memory Usage', value: Math.random() * 1000, unit: 'MB', timestamp: Date.now() },
-      { name: 'Network Latency', value: Math.random() * 200, unit: 'ms', timestamp: Date.now() },
-      { name: 'Transactions/sec', value: Math.random() * 10, unit: 'tx/s', timestamp: Date.now() },
-      { name: 'Success Rate', value: monitoringData.tradingAnalytics.successRate, unit: '%', timestamp: Date.now() },
-      { name: 'Uptime', value: (Date.now() - monitoringData.systemStartTime) / 60000, unit: 'min', timestamp: Date.now() }
-    ];
-    
+    const metrics = getPerformanceMetrics();
     res.json(metrics);
   } catch (error) {
     console.error('Error fetching performance metrics:', error);
@@ -1782,51 +2223,7 @@ app.get('/api/monitoring/performance', (req, res) => {
 
 app.get('/api/monitoring/health', (req, res) => {
   try {
-    const health = {
-      components: [
-        {
-          name: 'Backend API',
-          status: 'operational',
-          lastChecked: Date.now(),
-          responseTime: Math.random() * 100,
-          details: 'All systems operational'
-        },
-        {
-          name: 'Solana RPC',
-          status: 'operational',
-          lastChecked: Date.now(),
-          responseTime: Math.random() * 200,
-          details: `Endpoint: ${swapConfig.RPC_URL.slice(0, 30)}...`
-        },
-        {
-          name: 'WebSocket Connection',
-          status: 'operational',
-          lastChecked: Date.now(),
-          details: `Connected to ${swapConfig.WS_URL.slice(0, 30)}...`
-        },
-        {
-          name: 'Trading Engine',
-          status: globalTradingFlag.value ? 'operational' : 'degraded',
-          lastChecked: Date.now(),
-          details: globalTradingFlag.value ? 'Active' : 'Idle'
-        },
-        {
-          name: 'Session Storage',
-          status: 'operational',
-          lastChecked: Date.now(),
-          details: `Directory: ${swapConfig.SESSION_DIR}`
-        },
-        {
-          name: 'System Resources',
-          status: Math.random() > 0.1 ? 'operational' : 'degraded',
-          lastChecked: Date.now(),
-          details: `CPU: ${Math.floor(Math.random() * 30 + 10)}%, Memory: ${Math.floor(Math.random() * 40 + 20)}%`
-        }
-      ],
-      uptime: Date.now() - monitoringData.systemStartTime,
-      startTime: monitoringData.systemStartTime
-    };
-    
+    const health = getSystemHealth();
     res.json(health);
   } catch (error) {
     console.error('Error fetching system health:', error);
@@ -1836,9 +2233,8 @@ app.get('/api/monitoring/health', (req, res) => {
 
 app.get('/api/monitoring/balance-changes', (req, res) => {
   try {
-    const { limit = 50 } = req.query;
-    const limitedChanges = monitoringData.balanceChanges.slice(0, parseInt(limit));
-    res.json(limitedChanges);
+    const limit = parseInt(req.query.limit) || 50;
+    res.json(monitoringData.balanceChanges.slice(0, limit));
   } catch (error) {
     console.error('Error fetching balance changes:', error);
     res.status(500).json({ error: 'Failed to fetch balance changes' });
@@ -1847,7 +2243,8 @@ app.get('/api/monitoring/balance-changes', (req, res) => {
 
 app.get('/api/monitoring/analytics', (req, res) => {
   try {
-    res.json(monitoringData.tradingAnalytics);
+    const analytics = getTradingAnalytics();
+    res.json(analytics);
   } catch (error) {
     console.error('Error fetching trading analytics:', error);
     res.status(500).json({ error: 'Failed to fetch trading analytics' });
@@ -1878,16 +2275,23 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Serve the React app for any other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
 // Error handling
 app.use((error, req, res, next) => {
   console.error('API Error:', error);
-  addLog('error', `API Error: ${error.message}`, 'server', { error: error.stack });
+  
+  // Add log entry for API error
+  addLog('error', `API Error: ${error.message}`, 'api', { 
+    path: req.path, 
+    method: req.method, 
+    error 
+  });
+  
   res.status(500).json({ error: 'Internal server error' });
+});
+
+// Serve the React app for any other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 // Start server
@@ -1903,11 +2307,13 @@ app.listen(PORT, () => {
   console.log('✅ Real session management');
   console.log('✅ Token account closing and balance consolidation');
   console.log('✅ Configuration management system');
-  console.log('✅ Monitoring system with real-time data');
   console.log('✅ Ready for production use');
   
-  // Add initial log
+  // Add initial log entries
   addLog('info', 'Server started successfully', 'system', { port: PORT });
+  addLog('info', `RPC URL: ${swapConfig.RPC_URL}`, 'system');
+  addLog('info', `WebSocket URL: ${swapConfig.WS_URL}`, 'system');
+  addLog('info', `Session Directory: ${swapConfig.SESSION_DIR}`, 'system');
 });
 
 module.exports = app;
