@@ -1,14 +1,14 @@
 import React, { useState } from 'react'
 import { useSelector } from 'react-redux'
-import { Plus, FolderOpen, RotateCcw, Download } from 'lucide-react'
+import { Plus, FolderOpen, RotateCcw } from 'lucide-react'
 import { RootState } from '../store/store'
-import NewSessionWizard from '../components/sessions/NewSessionWizard'
 import SessionBrowser from '../components/sessions/SessionBrowser'
 import RestartPointSelector from '../components/sessions/RestartPointSelector'
+import MainSessionFlow from '../components/sessions/MainSessionFlow'
 
 const Sessions: React.FC = () => {
-  const { currentSession, isLoading } = useSelector((state: RootState) => state.session)
-  const [showNewSessionWizard, setShowNewSessionWizard] = useState(false)
+  const { currentSession } = useSelector((state: RootState) => state.session)
+  const [showMainFlow, setShowMainFlow] = useState(false)
   const [showRestartSelector, setShowRestartSelector] = useState(false)
   const [selectedSessionFile, setSelectedSessionFile] = useState<string | null>(null)
 
@@ -20,6 +20,10 @@ const Sessions: React.FC = () => {
     if (currentSession) {
       setShowRestartSelector(true)
     }
+  }
+
+  const handleStartNewSession = () => {
+    setShowMainFlow(true)
   }
 
   return (
@@ -47,7 +51,7 @@ const Sessions: React.FC = () => {
           )}
           
           <button
-            onClick={() => setShowNewSessionWizard(true)}
+            onClick={handleStartNewSession}
             className="flex items-center px-4 py-2 bg-solana-600 hover:bg-solana-700 text-white font-medium rounded-lg transition-colors"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -117,12 +121,15 @@ const Sessions: React.FC = () => {
         <SessionBrowser onSelectSession={handleSelectSession} />
       </div>
 
-      {/* Modals */}
-      <NewSessionWizard
-        isOpen={showNewSessionWizard}
-        onClose={() => setShowNewSessionWizard(false)}
-      />
+      {/* Main Session Flow Modal */}
+      {showMainFlow && (
+        <MainSessionFlow
+          isOpen={showMainFlow}
+          onClose={() => setShowMainFlow(false)}
+        />
+      )}
 
+      {/* Restart Point Selector Modal */}
       {currentSession && (
         <RestartPointSelector
           isOpen={showRestartSelector}

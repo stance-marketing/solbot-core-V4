@@ -11,6 +11,7 @@ interface RestartPointSelectorProps {
   sessionFilename: string
 }
 
+// These match your exact restart points from index.ts
 interface RestartPoint {
   id: number
   name: string

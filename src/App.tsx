@@ -4,7 +4,6 @@ import { useDispatch } from 'react-redux'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Sessions from './pages/Sessions'
-import TokenDiscoveryPage from './pages/TokenDiscovery'
 import Trading from './pages/Trading'
 import Wallets from './pages/Wallets'
 import Settings from './pages/Settings'
@@ -24,7 +23,6 @@ function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/sessions" element={<Sessions />} />
-        <Route path="/token-discovery" element={<TokenDiscoveryPage />} />
         <Route path="/trading" element={<Trading />} />
         <Route path="/wallets" element={<Wallets />} />
         <Route path="/settings" element={<Settings />} />
