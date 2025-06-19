@@ -3,6 +3,28 @@
 @tailwind utilities;
 
 :root {
+  /* Dark theme variables (default) */
+  --background: #0f1117;
+  --foreground: #f8fafc;
+  --card: #1a1d29;
+  --card-foreground: #f8fafc;
+  --primary: #9945FF;
+  --primary-foreground: #ffffff;
+  --secondary: #14F195;
+  --secondary-foreground: #1f2937;
+  --accent: #DA2EEF;
+  --accent-foreground: #ffffff;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --border: #2a3146;
+  --input: #2a3146;
+  --ring: #9945FF;
+  --toast-bg: #1a1d29;
+  --toast-color: #f8fafc;
+  --toast-border: #2a3146;
+}
+
+.light {
   /* Light theme variables */
   --background: #ffffff;
   --foreground: #1f2937;
@@ -22,28 +44,6 @@
   --toast-bg: #ffffff;
   --toast-color: #1f2937;
   --toast-border: #e5e7eb;
-}
-
-.dark {
-  /* Dark theme variables */
-  --background: #0f1117;
-  --foreground: #f8fafc;
-  --card: #1a1d29;
-  --card-foreground: #f8fafc;
-  --primary: #9945FF;
-  --primary-foreground: #ffffff;
-  --secondary: #14F195;
-  --secondary-foreground: #1f2937;
-  --accent: #DA2EEF;
-  --accent-foreground: #ffffff;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --border: #2a3146;
-  --input: #2a3146;
-  --ring: #9945FF;
-  --toast-bg: #1a1d29;
-  --toast-color: #f8fafc;
-  --toast-border: #2a3146;
 }
 
 @layer base {

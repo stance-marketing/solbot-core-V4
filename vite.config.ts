@@ -8,34 +8,27 @@ export default defineConfig({
     port: 3000,
     host: true,
     strictPort: false,
-    // Add compatibility settings for WebContainer
-    hmr: {
-      port: 3001,
-    },
   },
   define: {
     // Ensure proper Node.js globals are available
     global: 'globalThis',
   },
-  optimizeDeps: {
-    // Force pre-bundling of problematic dependencies
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      '@reduxjs/toolkit',
-      'react-redux',
-      'framer-motion',
-      'lucide-react',
-      'recharts',
-      'react-hot-toast',
-      'date-fns',
-      'clsx',
-      'tailwind-merge'
-    ],
-  },
   build: {
     target: 'esnext',
-    minify: false,
-  },
+    outDir: 'dist',
+    assetsDir: 'assets',
+    minify: true,
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          redux: ['@reduxjs/toolkit', 'react-redux'],
+          ui: ['lucide-react', 'react-hot-toast', 'framer-motion'],
+          charts: ['recharts'],
+          utils: ['date-fns', 'date-fns-tz', 'clsx', 'tailwind-merge']
+        }
+      }
+    }
+  }
 })

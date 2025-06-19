@@ -11,16 +11,19 @@ const { toZonedTime } = require('date-fns-tz');
 require('dotenv').config();
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from the dist directory
+app.use(express.static(path.join(__dirname, 'dist')));
+
 // Configuration using your provided RPC
 const swapConfig = {
-  RPC_URL: "https://shy-yolo-theorem.solana-mainnet.quiknode.pro/1796bb57c2fdd2a536ae9f46f2d0fd57a9f27bc3/",
-  WS_URL: "wss://shy-yolo-theorem.solana-mainnet.quiknode.pro/1796bb57c2fdd2a536ae9f46f2d0fd57a9f27bc3/",
+  RPC_URL: process.env.RPC_URL || "https://floral-capable-sun.solana-mainnet.quiknode.pro/569466c8ec8e71909ae64117473d0bd3327e133a/",
+  WS_URL: process.env.WS_URL || "wss://floral-capable-sun.solana-mainnet.quiknode.pro/569466c8ec8e71909ae64117473d0bd3327e133a/",
   WSOL_ADDRESS: "So11111111111111111111111111111111111111112",
   RAYDIUM_LIQUIDITY_POOL_V4_ADDRESS: "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
   SLIPPAGE_PERCENT: 5,
@@ -42,7 +45,7 @@ const swapConfig = {
   maxSellPercentage: 100,
   buyDuration: 61000,
   sellDuration: 30000,
-  SESSION_DIR: "./sessions"
+  SESSION_DIR: process.env.SESSION_DIR || "./sessions"
 };
 
 // Initialize connection with your RPC
@@ -237,6 +240,144 @@ async function distributeTokens(adminWallet, fromTokenAccountPubkey, wallets, mi
     console.error(`Error in distributeTokens: ${error.message}`);
     throw error;
   }
+}
+
+// Token account closing function
+async function closeTokenAccountsAndSendBalance(adminWallet, tradingWallets, tokenAddress, connection) {
+  console.log('Starting the process to close token accounts and send balance to admin wallet...');
+
+  for (let i = 0; i < tradingWallets.length; i++) {
+    const wallet = tradingWallets[i];
+    const walletNumber = i + 1;
+    const walletKeypair = Keypair.fromSecretKey(bs58.decode(wallet.privateKey));
+    const adminKeypair = Keypair.fromSecretKey(bs58.decode(adminWallet.privateKey));
+
+    console.log(`Processing wallet #${walletNumber}: ${wallet.publicKey}`);
+
+    try {
+      // Get token account
+      const tokenAccountAddress = await getOrCreateAssociatedTokenAccount(
+        connection,
+        adminWallet,
+        wallet,
+        new PublicKey(tokenAddress)
+      );
+
+      // Get token balance
+      let tokenBalance = 0;
+      try {
+        const tokenAccountInfo = await connection.getTokenAccountBalance(tokenAccountAddress);
+        if (tokenAccountInfo && tokenAccountInfo.value) {
+          tokenBalance = parseInt(tokenAccountInfo.value.amount);
+        }
+      } catch (error) {
+        console.error(`Error getting token balance for wallet ${wallet.publicKey}:`, error);
+      }
+
+      // Get token decimals
+      let decimals = 9; // Default to 9 decimals
+      try {
+        const mintInfo = await connection.getParsedAccountInfo(new PublicKey(tokenAddress));
+        if (mintInfo.value && 'parsed' in mintInfo.value.data) {
+          decimals = mintInfo.value.data.parsed.info.decimals;
+        }
+      } catch (error) {
+        console.error(`Error getting token decimals for ${tokenAddress}:`, error);
+      }
+
+      // Burn tokens if there are any
+      if (tokenBalance > 0) {
+        console.log(`Burning ${tokenBalance / Math.pow(10, decimals)} tokens from wallet ${wallet.publicKey}`);
+
+        try {
+          const burnTransaction = new Transaction().add(
+            burnChecked(
+              connection,
+              adminKeypair, // fee payer
+              tokenAccountAddress, // token account
+              new PublicKey(tokenAddress), // mint
+              walletKeypair, // owner
+              BigInt(tokenBalance), // amount
+              decimals // decimals
+            )
+          );
+
+          const { blockhash } = await connection.getLatestBlockhash();
+          burnTransaction.recentBlockhash = blockhash;
+          burnTransaction.feePayer = adminKeypair.publicKey;
+
+          const burnTxHash = await sendAndConfirmTransaction(connection, burnTransaction, [walletKeypair, adminKeypair]);
+          console.log(`Burned tokens from wallet ${wallet.publicKey}. Transaction hash: ${burnTxHash}`);
+        } catch (error) {
+          console.error(`Error burning tokens for wallet ${wallet.publicKey}:`, error);
+        }
+      } else {
+        console.log(`No tokens to burn for wallet ${wallet.publicKey}`);
+      }
+
+      // Close the token account
+      try {
+        const closeTransaction = new Transaction().add(
+          closeAccount(
+            connection,
+            adminKeypair, // fee payer
+            tokenAccountAddress, // token account
+            new PublicKey(adminWallet.publicKey), // destination (admin wallet)
+            walletKeypair // owner of token account
+          )
+        );
+
+        const { blockhash } = await connection.getLatestBlockhash();
+        closeTransaction.recentBlockhash = blockhash;
+        closeTransaction.feePayer = adminKeypair.publicKey;
+
+        const closeTxHash = await sendAndConfirmTransaction(connection, closeTransaction, [walletKeypair, adminKeypair]);
+        console.log(`Closed token account for wallet ${wallet.publicKey}. Transaction hash: ${closeTxHash}`);
+      } catch (error) {
+        console.error(`Error closing token account for wallet ${wallet.publicKey}:`, error);
+      }
+
+      // Send SOL balance to admin wallet
+      const solBalance = await getSolBalance(wallet, connection);
+      if (solBalance > 0) {
+        const lamportsToSend = Math.floor(solBalance * LAMPORTS_PER_SOL) - 5000; // Leave a small amount for fees
+
+        if (lamportsToSend > 0) {
+          try {
+            const transferTransaction = new Transaction().add(
+              SystemProgram.transfer({
+                fromPubkey: walletKeypair.publicKey,
+                toPubkey: adminKeypair.publicKey,
+                lamports: lamportsToSend
+              })
+            );
+
+            const { blockhash } = await connection.getLatestBlockhash();
+            transferTransaction.recentBlockhash = blockhash;
+            transferTransaction.feePayer = walletKeypair.publicKey;
+
+            const transferTxHash = await sendAndConfirmTransaction(connection, transferTransaction, [walletKeypair]);
+            console.log(`Transferred ${solBalance.toFixed(6)} SOL from wallet ${wallet.publicKey} to admin wallet. Transaction hash: ${transferTxHash}`);
+          } catch (error) {
+            console.error(`Error transferring SOL from wallet ${wallet.publicKey}:`, error);
+          }
+        } else {
+          console.log(`Not enough SOL to transfer from wallet ${wallet.publicKey}`);
+        }
+      } else {
+        console.log(`No SOL to transfer for wallet ${wallet.publicKey}`);
+      }
+
+    } catch (error) {
+      console.error(`Error processing wallet ${wallet.publicKey}:`, error);
+    }
+
+    // Add a small delay between wallets
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  console.log('Completed the process of closing token accounts and sending balances to admin wallet.');
+  return { success: true };
 }
 
 // Your Dexscreener integration
@@ -815,6 +956,18 @@ app.post('/api/restart/:point', async (req, res) => {
         break;
       case 6:
         // Here you would call your closeTokenAccountsAndSendBalance function
+        const adminWalletInstance = WalletWithNumber.fromPrivateKey(sessionData.admin.privateKey, sessionData.admin.number);
+        const tradingWalletInstances = sessionData.wallets.map(wallet => 
+          WalletWithNumber.fromPrivateKey(wallet.privateKey, wallet.number)
+        );
+        
+        await closeTokenAccountsAndSendBalance(
+          adminWalletInstance, 
+          tradingWalletInstances, 
+          sessionData.tokenAddress, 
+          connection
+        );
+        
         res.json({ success: true, message: 'Token accounts closed and balances sent to admin' });
         break;
       default:
@@ -830,7 +983,19 @@ app.post('/api/restart/:point', async (req, res) => {
 app.post('/api/cleanup/close-accounts', async (req, res) => {
   try {
     const { sessionData } = req.body;
-    // Here you would call your closeTokenAccountsAndSendBalance function
+    
+    const adminWalletInstance = WalletWithNumber.fromPrivateKey(sessionData.admin.privateKey, sessionData.admin.number);
+    const tradingWalletInstances = sessionData.wallets.map(wallet => 
+      WalletWithNumber.fromPrivateKey(wallet.privateKey, wallet.number)
+    );
+    
+    await closeTokenAccountsAndSendBalance(
+      adminWalletInstance, 
+      tradingWalletInstances, 
+      sessionData.tokenAddress, 
+      connection
+    );
+    
     res.json({ success: true, message: 'Token accounts closed and balances sent to admin' });
   } catch (error) {
     console.error('Error closing token accounts:', error);
@@ -858,6 +1023,55 @@ app.post('/api/sessions/export-env', async (req, res) => {
   }
 });
 
+// Configuration Management
+app.get('/api/config/swap', (req, res) => {
+  res.json(swapConfig);
+});
+
+app.post('/api/config/swap', (req, res) => {
+  try {
+    const { config } = req.body;
+    
+    // Update the swapConfig object with the new values
+    Object.assign(swapConfig, config);
+    
+    // Save the updated config to a file
+    const configFilePath = path.join(__dirname, 'swapConfig.json');
+    fs.writeFileSync(configFilePath, JSON.stringify(swapConfig, null, 2));
+    
+    res.json({ success: true, message: 'Configuration updated successfully' });
+  } catch (error) {
+    console.error('Error updating configuration:', error);
+    res.status(500).json({ error: 'Failed to update configuration' });
+  }
+});
+
+app.post('/api/config/test-rpc', async (req, res) => {
+  try {
+    const { rpcUrl } = req.body;
+    
+    if (!rpcUrl) {
+      return res.status(400).json({ error: 'RPC URL is required' });
+    }
+    
+    // Test the RPC connection
+    const testConnection = new Connection(rpcUrl, 'confirmed');
+    const version = await testConnection.getVersion();
+    
+    res.json({ 
+      success: true, 
+      message: 'RPC connection successful', 
+      version 
+    });
+  } catch (error) {
+    console.error('Error testing RPC connection:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: `Failed to connect to RPC: ${error.message}` 
+    });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -874,9 +1088,16 @@ app.get('/api/health', (req, res) => {
       solDistribution: true,
       tokenDistribution: true,
       tradingControls: true,
-      realSolanaFunctions: true
+      realSolanaFunctions: true,
+      tokenAccountCleaner: true,
+      configurationManager: true
     }
   });
+});
+
+// Serve the React app for any other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 // Error handling
@@ -887,7 +1108,7 @@ app.use((error, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Production Backend API server running on http://localhost:${PORT}`);
+  console.log(`🚀 Production server running on http://localhost:${PORT}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🌐 RPC URL: ${swapConfig.RPC_URL}`);
   console.log(`🌐 WebSocket URL: ${swapConfig.WS_URL}`);
@@ -896,6 +1117,8 @@ app.listen(PORT, () => {
   console.log('✅ Real wallet generation and SOL distribution');
   console.log('✅ Real Dexscreener API integration');
   console.log('✅ Real session management');
+  console.log('✅ Token account closing and balance consolidation');
+  console.log('✅ Configuration management system');
   console.log('✅ Ready for production use');
 });
 

@@ -43,6 +43,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                   primary: '#ef4444',
                   secondary: '#ffffff',
                 },
+                duration: 5000,
               },
             }}
           />
