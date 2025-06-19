@@ -81,7 +81,7 @@ const themeSlice = createSlice({
         }
         
         // Listen for system theme changes
-        mediaQuery.addEventListener('change', (e) => {
+        const handleChange = (e: MediaQueryListEvent) => {
           if (state.theme === 'system') {
             state.isDark = e.matches
             if (e.matches) {
@@ -90,7 +90,14 @@ const themeSlice = createSlice({
               document.documentElement.classList.remove('dark')
             }
           }
-        })
+        }
+        
+        mediaQuery.addEventListener('change', handleChange)
+        
+        // Return cleanup function
+        return () => {
+          mediaQuery.removeEventListener('change', handleChange)
+        }
       }
     },
   },
