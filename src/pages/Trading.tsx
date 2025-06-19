@@ -19,7 +19,9 @@ import {
   Target,
   Timer,
   RotateCcw,
-  ArrowDown
+  ArrowDown,
+  Database,
+  Calculator
 } from 'lucide-react'
 import { RootState } from '../store/store'
 import { backendService } from '../services/backendService'
@@ -43,6 +45,9 @@ import TradingMetrics from '../components/trading/TradingMetrics'
 import DynamicLapManager from '../components/trading/DynamicLapManager'
 import CollectionMonitor from '../components/trading/CollectionMonitor'
 import WalletRegenerationTracker from '../components/trading/WalletRegenerationTracker'
+import BalanceTracker from '../components/trading/BalanceTracker'
+import SwapCalculator from '../components/trading/SwapCalculator'
+import PoolInfoMonitor from '../components/trading/PoolInfoMonitor'
 import toast from 'react-hot-toast'
 
 const Trading: React.FC = () => {
@@ -64,13 +69,15 @@ const Trading: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [walletStatuses, setWalletStatuses] = useState<Map<string, any>>(new Map())
   const [recentTransactions, setRecentTransactions] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'control' | 'laps' | 'collection' | 'regeneration'>('control')
+  const [activeTab, setActiveTab] = useState<'control' | 'laps' | 'collection' | 'regeneration' | 'transactions' | 'analytics'>('control')
   
   // Lap management state
   const [isCollectionActive, setIsCollectionActive] = useState(false)
   const [isRegenerationActive, setIsRegenerationActive] = useState(false)
   const [lapResults, setLapResults] = useState<any[]>([])
   const [collectionData, setCollectionData] = useState<any[]>([])
+  const [swapCalculations, setSwapCalculations] = useState<any[]>([])
+  const [poolInfo, setPoolInfo] = useState<any>(null)
 
   // Real-time updates
   useEffect(() => {
@@ -224,31 +231,16 @@ const Trading: React.FC = () => {
     }
   }
 
-  const formatTime = (milliseconds: number) => {
-    const totalSeconds = Math.floor(milliseconds / 1000)
-    const minutes = Math.floor(totalSeconds / 60)
-    const seconds = totalSeconds % 60
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  const handleTransactionUpdate = (transactions: any[]) => {
+    setRecentTransactions(transactions)
   }
 
-  const getStatusColor = () => {
-    switch (status) {
-      case 'running': return 'text-green-500'
-      case 'paused': return 'text-yellow-500'
-      case 'stopped': return 'text-red-500'
-      case 'error': return 'text-red-500'
-      default: return 'text-gray-500'
-    }
+  const handleSwapCalculationUpdate = (calculations: any[]) => {
+    setSwapCalculations(calculations)
   }
 
-  const getStatusIcon = () => {
-    switch (status) {
-      case 'running': return <Play className="w-5 h-5" />
-      case 'paused': return <Pause className="w-5 h-5" />
-      case 'stopped': return <Square className="w-5 h-5" />
-      case 'error': return <AlertCircle className="w-5 h-5" />
-      default: return <Activity className="w-5 h-5" />
-    }
+  const handlePoolUpdate = (poolData: any) => {
+    setPoolInfo(poolData)
   }
 
   // Calculate metrics
@@ -261,7 +253,9 @@ const Trading: React.FC = () => {
     { id: 'control', name: 'Trading Control', icon: Settings },
     { id: 'laps', name: 'Lap Management', icon: Target },
     { id: 'collection', name: 'Collection Monitor', icon: ArrowDown },
-    { id: 'regeneration', name: 'Wallet Regeneration', icon: RotateCcw }
+    { id: 'regeneration', name: 'Wallet Regeneration', icon: RotateCcw },
+    { id: 'transactions', name: 'Transactions', icon: Activity },
+    { id: 'analytics', name: 'Analytics', icon: BarChart3 }
   ]
 
   return (
@@ -273,7 +267,7 @@ const Trading: React.FC = () => {
             Advanced Trading Control Center
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Dynamic multi-lap trading with automatic wallet regeneration
+            Dynamic multi-lap trading with real-time monitoring and analytics
           </p>
         </div>
         
@@ -291,10 +285,16 @@ const Trading: React.FC = () => {
             status === 'paused' ? 'bg-yellow-100 dark:bg-yellow-900/20' :
             'bg-gray-100 dark:bg-gray-700'
           }`}>
-            <div className={getStatusColor()}>
-              {getStatusIcon()}
-            </div>
-            <span className={`font-medium capitalize ${getStatusColor()}`}>
+            <div className={`w-2 h-2 rounded-full ${
+              status === 'running' ? 'bg-green-500 animate-pulse' :
+              status === 'paused' ? 'bg-yellow-500' :
+              'bg-gray-400'
+            }`}></div>
+            <span className={`font-medium capitalize ${
+              status === 'running' ? 'text-green-700 dark:text-green-300' :
+              status === 'paused' ? 'text-yellow-700 dark:text-yellow-300' :
+              'text-gray-700 dark:text-gray-300'
+            }`}>
               {status}
             </span>
           </div>
@@ -331,8 +331,8 @@ const Trading: React.FC = () => {
 
       {/* Tab Navigation */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="flex space-x-8 px-6">
+        <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <nav className="flex space-x-6 px-6">
             {tabs.map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
@@ -340,7 +340,7 @@ const Trading: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     isActive
                       ? 'border-solana-500 text-solana-600 dark:text-solana-400'
                       : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
@@ -353,6 +353,9 @@ const Trading: React.FC = () => {
                   )}
                   {tab.id === 'regeneration' && isRegenerationActive && (
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  )}
+                  {tab.id === 'transactions' && status === 'running' && (
+                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
                   )}
                 </button>
               )
@@ -393,7 +396,9 @@ const Trading: React.FC = () => {
                 {/* Transaction Monitor */}
                 <TransactionMonitor
                   transactions={recentTransactions}
-                  onTransactionUpdate={setRecentTransactions}
+                  onTransactionUpdate={handleTransactionUpdate}
+                  tokenSymbol={currentSession?.tokenName}
+                  isActive={status === 'running'}
                 />
               </div>
 
@@ -432,6 +437,41 @@ const Trading: React.FC = () => {
               tokenSymbol={currentSession?.tokenName || 'Tokens'}
               onRegenerationComplete={handleRegenerationComplete}
             />
+          )}
+
+          {activeTab === 'transactions' && (
+            <div className="space-y-6">
+              <TransactionMonitor
+                transactions={recentTransactions}
+                onTransactionUpdate={handleTransactionUpdate}
+                tokenSymbol={currentSession?.tokenName}
+                isActive={status === 'running'}
+              />
+              
+              <BalanceTracker
+                wallets={tradingWallets}
+                tokenSymbol={currentSession?.tokenName || 'Tokens'}
+                adminWallet={adminWallet}
+                autoRefresh={status === 'running'}
+              />
+            </div>
+          )}
+
+          {activeTab === 'analytics' && (
+            <div className="space-y-6">
+              <PoolInfoMonitor
+                tokenAddress={currentSession?.tokenAddress || ''}
+                tokenSymbol={currentSession?.tokenName || 'Tokens'}
+                onPoolUpdate={handlePoolUpdate}
+                autoRefresh={status === 'running'}
+              />
+              
+              <SwapCalculator
+                tokenSymbol={currentSession?.tokenName || 'Tokens'}
+                onCalculationUpdate={handleSwapCalculationUpdate}
+                isActive={status === 'running'}
+              />
+            </div>
           )}
         </div>
       </div>

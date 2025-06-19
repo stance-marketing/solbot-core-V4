@@ -10,6 +10,9 @@ interface TradingLap {
   totalSolCollected: number
   totalTokensCollected: number
   status: 'running' | 'completed' | 'failed'
+  transactionCount?: number
+  successRate?: number
+  poolInfo?: any
 }
 
 interface TradingState {
@@ -25,6 +28,15 @@ interface TradingState {
   pauseStartTimes: number[]
   resumeTimes: number[]
   error: string | null
+  transactionStats: {
+    totalTransactions: number
+    successfulTransactions: number
+    failedTransactions: number
+    totalVolume: number
+    totalFees: number
+    averageSlippage: number
+  }
+  poolInfo: any | null
 }
 
 const initialState: TradingState = {
@@ -40,6 +52,15 @@ const initialState: TradingState = {
   pauseStartTimes: [],
   resumeTimes: [],
   error: null,
+  transactionStats: {
+    totalTransactions: 0,
+    successfulTransactions: 0,
+    failedTransactions: 0,
+    totalVolume: 0,
+    totalFees: 0,
+    averageSlippage: 0
+  },
+  poolInfo: null
 }
 
 const tradingSlice = createSlice({
@@ -87,16 +108,43 @@ const tradingSlice = createSlice({
         totalSolCollected: 0,
         totalTokensCollected: 0,
         status: 'running',
+        transactionCount: 0,
+        successRate: 0
       }
       state.currentLap = lap
       state.laps.push(lap)
     },
-    completeLap: (state, action: PayloadAction<{ solCollected: number; tokensCollected: number }>) => {
+    completeLap: (state, action: PayloadAction<{ 
+      solCollected: number; 
+      tokensCollected: number;
+      transactionCount?: number;
+      successRate?: number;
+      poolInfo?: any;
+    }>) => {
       if (state.currentLap) {
         state.currentLap.endTime = Date.now()
         state.currentLap.totalSolCollected = action.payload.solCollected
         state.currentLap.totalTokensCollected = action.payload.tokensCollected
         state.currentLap.status = 'completed'
+        
+        if (action.payload.transactionCount !== undefined) {
+          state.currentLap.transactionCount = action.payload.transactionCount
+        }
+        
+        if (action.payload.successRate !== undefined) {
+          state.currentLap.successRate = action.payload.successRate
+        }
+        
+        if (action.payload.poolInfo) {
+          state.currentLap.poolInfo = action.payload.poolInfo
+        }
+        
+        // Update the lap in the laps array
+        const lapIndex = state.laps.findIndex(lap => lap.lapNumber === state.currentLap?.lapNumber)
+        if (lapIndex !== -1) {
+          state.laps[lapIndex] = { ...state.currentLap }
+        }
+        
         state.currentLap = null
       }
     },
@@ -104,6 +152,13 @@ const tradingSlice = createSlice({
       if (state.currentLap) {
         state.currentLap.endTime = Date.now()
         state.currentLap.status = 'failed'
+        
+        // Update the lap in the laps array
+        const lapIndex = state.laps.findIndex(lap => lap.lapNumber === state.currentLap?.lapNumber)
+        if (lapIndex !== -1) {
+          state.laps[lapIndex] = { ...state.currentLap }
+        }
+        
         state.currentLap = null
       }
       state.error = action.payload
@@ -111,6 +166,15 @@ const tradingSlice = createSlice({
     updateElapsedTime: (state, action: PayloadAction<number>) => {
       state.elapsedTime = action.payload
       state.timeLeft = Math.max(0, state.duration - action.payload)
+    },
+    updateTransactionStats: (state, action: PayloadAction<Partial<TradingState['transactionStats']>>) => {
+      state.transactionStats = {
+        ...state.transactionStats,
+        ...action.payload
+      }
+    },
+    setPoolInfo: (state, action: PayloadAction<any>) => {
+      state.poolInfo = action.payload
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload
@@ -139,6 +203,8 @@ export const {
   completeLap,
   failLap,
   updateElapsedTime,
+  updateTransactionStats,
+  setPoolInfo,
   setError,
   clearError,
   reset,
