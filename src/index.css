@@ -6,12 +6,22 @@
   --toast-bg: #ffffff;
   --toast-color: #1f2937;
   --toast-border: #e5e7eb;
+  
+  /* Custom color variables */
+  --background: #ffffff;
+  --foreground: #1f2937;
+  --border: #e5e7eb;
 }
 
 .dark {
   --toast-bg: #1f2937;
   --toast-color: #f9fafb;
   --toast-border: #374151;
+  
+  /* Custom color variables for dark mode */
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --border: #334155;
 }
 
 @layer base {

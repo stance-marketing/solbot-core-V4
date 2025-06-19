@@ -8,6 +8,9 @@ export default {
   theme: {
     extend: {
       colors: {
+        border: 'var(--border)',
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
         solana: {
           50: '#f0f9ff',
           100: '#e0f2fe',
