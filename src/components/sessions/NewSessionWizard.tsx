@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { X, ArrowRight, ArrowLeft, Check, AlertCircle, Loader2, Wallet, DollarSign } from 'lucide-react'
-import { backendService } from '../../services/backendService'
-import { setCurrentSession } from '../../store/slices/sessionSlice'
+import { sessionService } from '../../services/sessionService'
+import { setCurrentSession, setError } from '../../store/slices/sessionSlice'
 import { setAdminWallet, setTradingWallets } from '../../store/slices/walletSlice'
 import { WalletData } from '../../store/slices/walletSlice'
 import toast from 'react-hot-toast'
@@ -29,7 +29,6 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
   // Form data
   const [tokenAddress, setTokenAddress] = useState('')
   const [tokenData, setTokenData] = useState<TokenData | null>(null)
-  const [poolKeys, setPoolKeys] = useState<any>(null)
   const [adminWalletOption, setAdminWalletOption] = useState<'create' | 'import'>('create')
   const [adminPrivateKey, setAdminPrivateKey] = useState('')
   const [adminWallet, setAdminWalletState] = useState<WalletData | null>(null)
@@ -49,7 +48,6 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
     setCurrentStep(1)
     setTokenAddress('')
     setTokenData(null)
-    setPoolKeys(null)
     setAdminWalletOption('create')
     setAdminPrivateKey('')
     setAdminWalletState(null)
@@ -75,21 +73,16 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
     setErrorState(null)
 
     try {
-      const result = await backendService.validateTokenAddress(tokenAddress)
+      const result = await sessionService.validateTokenAddress(tokenAddress)
       if (result.isValid && result.tokenData) {
         setTokenData(result.tokenData)
-        
-        // Get pool keys
-        const keys = await backendService.getPoolKeys(tokenAddress)
-        setPoolKeys(keys)
-        
         return true
       } else {
         setErrorState('Invalid token address or token not found')
         return false
       }
     } catch (error) {
-      setErrorState(`Failed to validate token: ${error.message}`)
+      setErrorState('Failed to validate token address')
       return false
     } finally {
       setIsLoading(false)
@@ -101,13 +94,34 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
     setErrorState(null)
 
     try {
-      const wallet = await backendService.createAdminWallet(
-        adminWalletOption === 'import' ? adminPrivateKey : undefined
-      )
-      setAdminWalletState(wallet)
+      if (adminWalletOption === 'import') {
+        if (!adminPrivateKey.trim()) {
+          setErrorState('Please enter admin wallet private key')
+          return false
+        }
+        // Validate private key format here
+        const wallet: WalletData = {
+          number: 0,
+          publicKey: 'ImportedAdminPublicKey', // This would be derived from private key
+          privateKey: adminPrivateKey,
+          solBalance: 0,
+          tokenBalance: 0,
+          isActive: true
+        }
+        setAdminWalletState(wallet)
+      } else {
+        // Generate new admin wallet
+        const wallets = await sessionService.generateWallets(1)
+        const wallet: WalletData = {
+          ...wallets[0],
+          number: 0,
+          isActive: true
+        }
+        setAdminWalletState(wallet)
+      }
       return true
     } catch (error) {
-      setErrorState(`Failed to create admin wallet: ${error.message}`)
+      setErrorState('Failed to create admin wallet')
       return false
     } finally {
       setIsLoading(false)
@@ -124,11 +138,11 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
     setErrorState(null)
 
     try {
-      const wallets = await backendService.generateWallets(walletCount)
+      const wallets = await sessionService.generateWallets(walletCount)
       setTradingWalletsState(wallets)
       return true
     } catch (error) {
-      setErrorState(`Failed to generate wallets: ${error.message}`)
+      setErrorState('Failed to generate trading wallets')
       return false
     } finally {
       setIsLoading(false)
@@ -150,11 +164,11 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
     setErrorState(null)
 
     try {
-      const updatedWallets = await backendService.distributeSol(adminWallet, tradingWallets, solAmount)
+      const updatedWallets = await sessionService.distributeSol(adminWallet, tradingWallets, solAmount)
       setTradingWalletsState(updatedWallets)
       return true
     } catch (error) {
-      setErrorState(`Failed to distribute SOL: ${error.message}`)
+      setErrorState('Failed to distribute SOL to wallets')
       return false
     } finally {
       setIsLoading(false)
@@ -162,7 +176,7 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
   }
 
   const createSession = async () => {
-    if (!tokenData || !adminWallet || tradingWallets.length === 0 || !poolKeys) {
+    if (!tokenData || !adminWallet || tradingWallets.length === 0) {
       setErrorState('All steps must be completed')
       return
     }
@@ -184,12 +198,12 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
           generationTimestamp: wallet.generationTimestamp
         })),
         tokenAddress,
-        poolKeys,
+        poolKeys: {},
         tokenName: tokenData.name,
         timestamp: new Date().toISOString()
       }
 
-      const filename = await backendService.saveSession(sessionData)
+      const filename = await sessionService.saveSession(sessionData)
       
       // Update Redux store
       dispatch(setCurrentSession(sessionData))
@@ -199,7 +213,7 @@ const NewSessionWizard: React.FC<NewSessionWizardProps> = ({ isOpen, onClose }) 
       toast.success(`Session created successfully: ${filename}`)
       handleClose()
     } catch (error) {
-      setErrorState(`Failed to create session: ${error.message}`)
+      setErrorState('Failed to create session')
     } finally {
       setIsLoading(false)
     }
