@@ -21,7 +21,8 @@ import {
   RotateCcw,
   ArrowDown,
   Database,
-  Calculator
+  Calculator,
+  Trash2
 } from 'lucide-react'
 import { RootState } from '../store/store'
 import { backendService } from '../services/backendService'
@@ -48,6 +49,7 @@ import WalletRegenerationTracker from '../components/trading/WalletRegenerationT
 import BalanceTracker from '../components/trading/BalanceTracker'
 import SwapCalculator from '../components/trading/SwapCalculator'
 import PoolInfoMonitor from '../components/trading/PoolInfoMonitor'
+import CleanupOperations from '../components/trading/CleanupOperations'
 import toast from 'react-hot-toast'
 
 const Trading: React.FC = () => {
@@ -69,7 +71,7 @@ const Trading: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [walletStatuses, setWalletStatuses] = useState<Map<string, any>>(new Map())
   const [recentTransactions, setRecentTransactions] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'control' | 'laps' | 'collection' | 'regeneration' | 'transactions' | 'analytics'>('control')
+  const [activeTab, setActiveTab] = useState<'control' | 'laps' | 'collection' | 'regeneration' | 'transactions' | 'analytics' | 'cleanup'>('control')
   
   // Lap management state
   const [isCollectionActive, setIsCollectionActive] = useState(false)
@@ -255,7 +257,8 @@ const Trading: React.FC = () => {
     { id: 'collection', name: 'Collection Monitor', icon: ArrowDown },
     { id: 'regeneration', name: 'Wallet Regeneration', icon: RotateCcw },
     { id: 'transactions', name: 'Transactions', icon: Activity },
-    { id: 'analytics', name: 'Analytics', icon: BarChart3 }
+    { id: 'analytics', name: 'Analytics', icon: BarChart3 },
+    { id: 'cleanup', name: 'Cleanup', icon: Trash2 }
   ]
 
   return (
@@ -472,6 +475,10 @@ const Trading: React.FC = () => {
                 isActive={status === 'running'}
               />
             </div>
+          )}
+
+          {activeTab === 'cleanup' && (
+            <CleanupOperations />
           )}
         </div>
       </div>
