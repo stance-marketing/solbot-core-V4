@@ -1,5 +1,6 @@
 import React from 'react'
 import { useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { 
   Activity, 
   Wallet, 
@@ -13,10 +14,16 @@ import {
 import { RootState } from '../store/store'
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate()
   const { currentSession } = useSelector((state: RootState) => state.session)
   const { status: tradingStatus, currentLap, laps } = useSelector((state: RootState) => state.trading)
   const { adminWallet, tradingWallets, totalSolBalance, totalTokenBalance } = useSelector((state: RootState) => state.wallet)
   const { status: connectionStatus } = useSelector((state: RootState) => state.websocket)
+
+  const handleCreateSession = () => {
+    console.log('Dashboard: Navigating to sessions page...') // Debug log
+    navigate('/sessions')
+  }
 
   const stats = [
     {
@@ -164,7 +171,10 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             Create a new session or load an existing one to get started
           </p>
-          <button className="inline-flex items-center px-4 py-2 bg-solana-600 hover:bg-solana-700 text-white font-medium rounded-lg transition-colors duration-200">
+          <button 
+            onClick={handleCreateSession}
+            className="inline-flex items-center px-4 py-2 bg-solana-600 hover:bg-solana-700 text-white font-medium rounded-lg transition-colors duration-200"
+          >
             Create Session
           </button>
         </div>
