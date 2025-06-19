@@ -8,7 +8,10 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "server": "node server.js",
-    "start": "concurrently \"npm run server\" \"npm run dev\""
+    "test-backend": "node test-backend.js",
+    "start": "concurrently \"npm run server\" \"npm run dev\"",
+    "start-backend": "node server.js",
+    "test-integration": "npm run test-backend"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.1",
