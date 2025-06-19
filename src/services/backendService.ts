@@ -35,7 +35,7 @@ class BackendService {
 
   private getErrorMessage(error: unknown): string {
     if (error instanceof Error) {
-      return this.getErrorMessage(error);
+      return error.message;
     }
     return String(error);
   }
@@ -59,15 +59,29 @@ class BackendService {
   // Test backend connection
   async testConnection(): Promise<boolean> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch(`${this.baseUrl}/health`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        // Add timeout to prevent hanging requests
-        signal: AbortSignal.timeout(5000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       return response.ok;
     } catch (error) {
-      console.error('Backend connection test failed:', error);
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error('Backend connection test timed out after 5 seconds');
+        } else if (error.message.includes('fetch')) {
+          console.error('Backend server is not running or not accessible at', this.baseUrl);
+        } else {
+          console.error('Backend connection test failed:', error.message);
+        }
+      } else {
+        console.error('Backend connection test failed:', error);
+      }
       return false;
     }
   }
@@ -76,9 +90,15 @@ class BackendService {
   async getSessionFiles(): Promise<SessionFile[]> {
     try {
       console.log('🔍 Fetching session files from backend...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/sessions`, {
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const files = await response.json();
       console.log('✅ Session files received:', files.length, 'files');
@@ -97,9 +117,15 @@ class BackendService {
   async loadSession(filename: string): Promise<SessionData> {
     try {
       console.log('🔍 Loading session from backend:', filename);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/sessions/${encodeURIComponent(filename)}`, {
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const sessionData = await response.json();
       console.log('✅ Session loaded successfully');
@@ -114,12 +140,18 @@ class BackendService {
   async saveSession(sessionData: SessionData): Promise<string> {
     try {
       console.log('💾 Saving session to backend...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
       const response = await fetch(`${this.baseUrl}/sessions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sessionData),
-        signal: AbortSignal.timeout(15000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const result = await response.json();
       console.log('✅ Session saved successfully:', result.filename);
@@ -134,12 +166,18 @@ class BackendService {
   async appendWalletsToSession(wallets: WalletData[], sessionFileName: string): Promise<void> {
     try {
       console.log('📝 Appending wallets to session...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
       const response = await fetch(`${this.baseUrl}/sessions/append-wallets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wallets, sessionFileName }),
-        signal: AbortSignal.timeout(15000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       console.log('✅ Wallets appended successfully');
     } catch (error) {
@@ -151,10 +189,16 @@ class BackendService {
   async deleteSession(filename: string): Promise<void> {
     try {
       console.log('🗑️ Deleting session:', filename);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/sessions/${encodeURIComponent(filename)}`, {
         method: 'DELETE',
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       console.log('✅ Session deleted successfully');
     } catch (error) {
@@ -174,13 +218,17 @@ class BackendService {
         throw new Error('Backend server is not running. Please start the backend with: npm run start-backend');
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(`${this.baseUrl}/tokens/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tokenAddress: address }),
-        signal: AbortSignal.timeout(15000)
+        signal: controller.signal
       });
       
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const result = await response.json();
       console.log('✅ Token validation result:', result);
@@ -195,12 +243,18 @@ class BackendService {
   async getPoolKeys(tokenAddress: string): Promise<any> {
     try {
       console.log('🔍 Getting pool keys from backend:', tokenAddress);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
       const response = await fetch(`${this.baseUrl}/tokens/pool-keys`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tokenAddress }),
-        signal: AbortSignal.timeout(15000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const poolKeys = await response.json();
       console.log('✅ Pool keys received:', poolKeys);
@@ -215,12 +269,18 @@ class BackendService {
   async getMarketId(tokenAddress: string): Promise<string> {
     try {
       console.log('🔍 Getting market ID from backend:', tokenAddress);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/tokens/market-id`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tokenAddress }),
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const result = await response.json();
       console.log('✅ Market ID received:', result.marketId);
@@ -235,10 +295,16 @@ class BackendService {
   async createAdminWallet(): Promise<WalletData> {
     try {
       console.log('👤 Creating admin wallet...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/wallets/admin`, {
         method: 'POST',
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const wallet = await response.json();
       console.log('✅ Admin wallet created:', wallet.publicKey);
@@ -253,12 +319,18 @@ class BackendService {
   async importAdminWallet(privateKey: string): Promise<WalletData> {
     try {
       console.log('📥 Importing admin wallet...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/wallets/admin/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ privateKey }),
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const wallet = await response.json();
       console.log('✅ Admin wallet imported:', wallet.publicKey);
@@ -273,12 +345,18 @@ class BackendService {
   async generateTradingWallets(count: number): Promise<WalletData[]> {
     try {
       console.log('🏭 Generating trading wallets:', count);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
       const response = await fetch(`${this.baseUrl}/wallets/trading`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ count }),
-        signal: AbortSignal.timeout(15000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const wallets = await response.json();
       console.log('✅ Trading wallets generated:', wallets.length);
@@ -293,12 +371,18 @@ class BackendService {
   async getWalletBalances(wallets: WalletData[]): Promise<WalletData[]> {
     try {
       console.log('💰 Getting wallet balances...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
       const response = await fetch(`${this.baseUrl}/wallets/balances`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wallets }),
-        signal: AbortSignal.timeout(15000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const updatedWallets = await response.json();
       console.log('✅ Wallet balances updated');
@@ -313,12 +397,18 @@ class BackendService {
   async getAdminTokenBalance(adminWallet: WalletData, tokenAddress: string): Promise<number> {
     try {
       console.log('💰 Getting admin token balance...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/wallets/admin/token-balance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminWallet, tokenAddress }),
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const result = await response.json();
       console.log('✅ Admin token balance:', result.balance);
@@ -333,12 +423,18 @@ class BackendService {
   async distributeSol(adminWallet: WalletData, tradingWallets: WalletData[], totalAmount: number): Promise<WalletData[]> {
     try {
       console.log('💸 Distributing SOL to wallets...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(`${this.baseUrl}/distribution/sol`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminWallet, tradingWallets, totalAmount }),
-        signal: AbortSignal.timeout(30000) // Longer timeout for distribution
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const result = await response.json();
       console.log('✅ SOL distributed successfully');
@@ -353,12 +449,18 @@ class BackendService {
   async distributeTokens(adminWallet: WalletData, tradingWallets: WalletData[], tokenAddress: string, amountPerWallet: number): Promise<WalletData[]> {
     try {
       console.log('🪙 Distributing tokens to wallets...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(`${this.baseUrl}/distribution/tokens`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminWallet, tradingWallets, tokenAddress, amountPerWallet }),
-        signal: AbortSignal.timeout(30000) // Longer timeout for distribution
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const updatedWallets = await response.json();
       console.log('✅ Tokens distributed successfully');
@@ -373,12 +475,18 @@ class BackendService {
   async startTrading(strategy: string, sessionData: SessionData): Promise<void> {
     try {
       console.log('🚀 Starting trading with strategy:', strategy);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
       const response = await fetch(`${this.baseUrl}/trading/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ strategy, sessionData }),
-        signal: AbortSignal.timeout(15000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       console.log('✅ Trading started successfully');
     } catch (error) {
@@ -390,10 +498,16 @@ class BackendService {
   async pauseTrading(): Promise<void> {
     try {
       console.log('⏸️ Pausing trading...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/trading/pause`, {
         method: 'POST',
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       console.log('✅ Trading paused');
     } catch (error) {
@@ -405,10 +519,16 @@ class BackendService {
   async resumeTrading(): Promise<void> {
     try {
       console.log('▶️ Resuming trading...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/trading/resume`, {
         method: 'POST',
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       console.log('✅ Trading resumed');
     } catch (error) {
@@ -420,10 +540,16 @@ class BackendService {
   async stopTrading(): Promise<void> {
     try {
       console.log('⏹️ Stopping trading...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/trading/stop`, {
         method: 'POST',
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       console.log('✅ Trading stopped');
     } catch (error) {
@@ -436,12 +562,18 @@ class BackendService {
   async restartFromPoint(point: number, sessionData: SessionData): Promise<void> {
     try {
       console.log('🔄 Restarting from point:', point);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      
       const response = await fetch(`${this.baseUrl}/restart/${point}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionData }),
-        signal: AbortSignal.timeout(20000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       console.log('✅ Restart initiated successfully');
     } catch (error) {
@@ -454,12 +586,18 @@ class BackendService {
   async closeTokenAccountsAndSendBalance(sessionData: SessionData): Promise<void> {
     try {
       console.log('🧹 Closing token accounts...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(`${this.baseUrl}/cleanup/close-accounts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionData }),
-        signal: AbortSignal.timeout(30000) // Longer timeout for cleanup
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       console.log('✅ Token accounts closed successfully');
     } catch (error) {
@@ -472,12 +610,18 @@ class BackendService {
   async generateEnvFile(sessionData: SessionData): Promise<string> {
     try {
       console.log('📄 Generating environment file...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/sessions/export-env`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionData }),
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const envContent = await response.text();
       console.log('✅ Environment file generated');
@@ -492,12 +636,18 @@ class BackendService {
   async saveSwapConfig(config: any): Promise<void> {
     try {
       console.log('💾 Saving swap configuration...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/config/swap`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ config }),
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       console.log('✅ Swap configuration saved');
     } catch (error) {
@@ -509,9 +659,15 @@ class BackendService {
   async getSwapConfig(): Promise<any> {
     try {
       console.log('🔍 Getting swap configuration...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/config/swap`, {
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       const config = await response.json();
       console.log('✅ Swap configuration retrieved');
@@ -526,12 +682,18 @@ class BackendService {
     try {
       console.log('🔍 Testing RPC connection:', rpcUrl);
       const startTime = Date.now();
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
       const response = await fetch(`${this.baseUrl}/config/test-rpc`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rpcUrl }),
-        signal: AbortSignal.timeout(15000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       const latency = Date.now() - startTime;
       
       if (response.ok) {
@@ -551,9 +713,14 @@ class BackendService {
   // Health check
   async checkHealth(): Promise<{ status: string; timestamp: string; tradingActive: boolean }> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${this.baseUrl}/health`, {
-        signal: AbortSignal.timeout(10000)
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       await this.handleResponse(response);
       return await response.json();
     } catch (error) {
