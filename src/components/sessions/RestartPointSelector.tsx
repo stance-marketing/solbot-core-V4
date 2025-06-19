@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { X, Play, AlertCircle, CheckCircle, Clock } from 'lucide-react'
-import { RESTART_POINTS, RestartPoint } from '../../services/sessionService'
+import { backendService } from '../../services/backendService'
 import { RootState } from '../../store/store'
 import toast from 'react-hot-toast'
 
@@ -10,6 +10,52 @@ interface RestartPointSelectorProps {
   onClose: () => void
   sessionFilename: string
 }
+
+interface RestartPoint {
+  id: number
+  name: string
+  description: string
+  available: boolean
+}
+
+const RESTART_POINTS: RestartPoint[] = [
+  {
+    id: 1,
+    name: 'After Token Discovery',
+    description: 'Restart from token validation and pool discovery',
+    available: true
+  },
+  {
+    id: 2,
+    name: 'After Admin Wallet Creation',
+    description: 'Restart from admin wallet setup and funding',
+    available: true
+  },
+  {
+    id: 3,
+    name: 'After Wallet Generation',
+    description: 'Restart from trading wallet creation',
+    available: true
+  },
+  {
+    id: 4,
+    name: 'After Wallet Funding',
+    description: 'Restart from SOL distribution to wallets',
+    available: true
+  },
+  {
+    id: 5,
+    name: 'Token Transfer to Wallets',
+    description: 'Restart from token distribution phase',
+    available: true
+  },
+  {
+    id: 6,
+    name: 'Close Token Account & Send Balance',
+    description: 'Clean up and consolidate all balances',
+    available: true
+  }
+]
 
 const RestartPointSelector: React.FC<RestartPointSelectorProps> = ({
   isOpen,
@@ -30,39 +76,14 @@ const RestartPointSelector: React.FC<RestartPointSelectorProps> = ({
     setIsLoading(true)
     
     try {
-      // This would call your backend restart functionality
-      // Based on the selected restart point, different backend functions would be called
+      // Call your backend restart function with the selected point
+      await backendService.restartFromPoint(selectedPoint, currentSession)
       
-      switch (selectedPoint) {
-        case 1:
-          // Restart after token discovery
-          toast.success('Restarting from token discovery...')
-          break
-        case 2:
-          // Restart after admin wallet creation
-          toast.success('Restarting from admin wallet setup...')
-          break
-        case 3:
-          // Restart after wallet generation
-          toast.success('Restarting from wallet generation...')
-          break
-        case 4:
-          // Restart after wallet funding
-          toast.success('Restarting from wallet funding...')
-          break
-        case 5:
-          // Token transfer to wallets
-          toast.success('Restarting from token transfer...')
-          break
-        case 6:
-          // Close token accounts and send balance
-          toast.success('Starting cleanup process...')
-          break
-      }
-      
+      const pointName = RESTART_POINTS.find(p => p.id === selectedPoint)?.name
+      toast.success(`Restarting from: ${pointName}`)
       onClose()
     } catch (error) {
-      toast.error('Failed to restart session')
+      toast.error(`Failed to restart session: ${error.message}`)
     } finally {
       setIsLoading(false)
     }

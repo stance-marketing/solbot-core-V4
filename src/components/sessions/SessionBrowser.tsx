@@ -12,7 +12,7 @@ import {
   Search,
   Filter
 } from 'lucide-react'
-import { sessionService, SessionFile } from '../../services/sessionService'
+import { backendService, SessionFile } from '../../services/backendService'
 import { setCurrentSession, setLoading, setError } from '../../store/slices/sessionSlice'
 import { setAdminWallet, setTradingWallets } from '../../store/slices/walletSlice'
 import toast from 'react-hot-toast'
@@ -42,10 +42,11 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
   const loadSessions = async () => {
     setIsLoadingState(true)
     try {
-      const sessionFiles = await sessionService.getSessionFiles()
+      // Call your backend to get session files
+      const sessionFiles = await backendService.getSessionFiles()
       setSessions(sessionFiles)
     } catch (error) {
-      toast.error('Failed to load session files')
+      toast.error(`Failed to load session files: ${error.message}`)
     } finally {
       setIsLoadingState(false)
     }
@@ -81,15 +82,16 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
   const handleLoadSession = async (filename: string) => {
     dispatch(setLoading(true))
     try {
-      const sessionData = await sessionService.loadSession(filename)
+      // Call your backend to load session
+      const sessionData = await backendService.loadSession(filename)
       
       // Convert session data to wallet format
       const adminWallet = {
         number: sessionData.admin.number,
         publicKey: sessionData.admin.address,
         privateKey: sessionData.admin.privateKey,
-        solBalance: 0, // This would be fetched from blockchain
-        tokenBalance: 0, // This would be fetched from blockchain
+        solBalance: 0, // This will be updated by real-time balance fetching
+        tokenBalance: 0, // This will be updated by real-time balance fetching
         isActive: true
       }
 
@@ -97,21 +99,26 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
         number: wallet.number,
         publicKey: wallet.address,
         privateKey: wallet.privateKey,
-        solBalance: 0, // This would be fetched from blockchain
-        tokenBalance: 0, // This would be fetched from blockchain
+        solBalance: 0, // This will be updated by real-time balance fetching
+        tokenBalance: 0, // This will be updated by real-time balance fetching
         isActive: false,
         generationTimestamp: wallet.generationTimestamp
       }))
 
+      // Get real-time balances from your backend
+      const walletsWithBalances = await backendService.getWalletBalances([adminWallet, ...tradingWallets])
+      const updatedAdminWallet = walletsWithBalances.find(w => w.number === 0)
+      const updatedTradingWallets = walletsWithBalances.filter(w => w.number > 0)
+
       dispatch(setCurrentSession(sessionData))
-      dispatch(setAdminWallet(adminWallet))
-      dispatch(setTradingWallets(tradingWallets))
+      dispatch(setAdminWallet(updatedAdminWallet || adminWallet))
+      dispatch(setTradingWallets(updatedTradingWallets))
       
       toast.success(`Session loaded: ${sessionData.tokenName}`)
       onSelectSession(filename)
     } catch (error) {
-      dispatch(setError('Failed to load session'))
-      toast.error('Failed to load session')
+      dispatch(setError(`Failed to load session: ${error.message}`))
+      toast.error(`Failed to load session: ${error.message}`)
     } finally {
       dispatch(setLoading(false))
     }
@@ -123,18 +130,22 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
     }
 
     try {
-      await sessionService.deleteSession(filename)
+      // Call your backend to delete session
+      await backendService.deleteSession(filename)
       setSessions(sessions.filter(s => s.filename !== filename))
       toast.success('Session deleted successfully')
     } catch (error) {
-      toast.error('Failed to delete session')
+      toast.error(`Failed to delete session: ${error.message}`)
     }
   }
 
   const handleExportSession = async (filename: string) => {
     try {
-      const sessionData = await sessionService.loadSession(filename)
-      const envContent = await sessionService.exportToEnv(sessionData)
+      // Load session data from your backend
+      const sessionData = await backendService.loadSession(filename)
+      
+      // Generate .env file content from your backend
+      const envContent = await backendService.generateEnvFile(sessionData)
       
       // Create and download .env file
       const blob = new Blob([envContent], { type: 'text/plain' })
@@ -149,7 +160,7 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onSelectSession }) => {
       
       toast.success('Environment file exported successfully')
     } catch (error) {
-      toast.error('Failed to export session')
+      toast.error(`Failed to export session: ${error.message}`)
     }
   }
 
