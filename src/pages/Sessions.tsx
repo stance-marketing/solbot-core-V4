@@ -23,7 +23,13 @@ const Sessions: React.FC = () => {
   }
 
   const handleStartNewSession = () => {
+    console.log('Starting new session flow...') // Debug log
     setShowMainFlow(true)
+  }
+
+  const handleCloseMainFlow = () => {
+    console.log('Closing main flow...') // Debug log
+    setShowMainFlow(false)
   }
 
   return (
@@ -122,12 +128,10 @@ const Sessions: React.FC = () => {
       </div>
 
       {/* Main Session Flow Modal */}
-      {showMainFlow && (
-        <MainSessionFlow
-          isOpen={showMainFlow}
-          onClose={() => setShowMainFlow(false)}
-        />
-      )}
+      <MainSessionFlow
+        isOpen={showMainFlow}
+        onClose={handleCloseMainFlow}
+      />
 
       {/* Restart Point Selector Modal */}
       {currentSession && (
