@@ -10,7 +10,6 @@ interface WebSocketMessage {
 }
 
 interface WebSocketState {
-  connection: WebSocket | null
   status: ConnectionStatus
   messages: WebSocketMessage[]
   lastMessage: WebSocketMessage | null
@@ -20,8 +19,10 @@ interface WebSocketState {
   url: string
 }
 
+// Store WebSocket instance outside of Redux state to avoid serialization issues
+let wsInstance: WebSocket | null = null
+
 const initialState: WebSocketState = {
-  connection: null,
   status: 'disconnected',
   messages: [],
   lastMessage: null,
@@ -36,9 +37,6 @@ const websocketSlice = createSlice({
   name: 'websocket',
   initialState,
   reducers: {
-    setConnection: (state, action: PayloadAction<WebSocket | null>) => {
-      state.connection = action.payload
-    },
     setStatus: (state, action: PayloadAction<ConnectionStatus>) => {
       state.status = action.payload
     },
@@ -73,7 +71,6 @@ const websocketSlice = createSlice({
 })
 
 export const {
-  setConnection,
   setStatus,
   addMessage,
   clearMessages,
@@ -86,12 +83,13 @@ export const {
 export const initializeWebSocket = () => (dispatch: any, getState: any) => {
   const { websocket } = getState()
   
-  if (websocket.connection) {
+  if (wsInstance) {
     try {
-      websocket.connection.close()
+      wsInstance.close()
     } catch (err) {
       console.error("Error closing existing WebSocket:", err)
     }
+    wsInstance = null
   }
 
   const connect = () => {
@@ -99,10 +97,8 @@ export const initializeWebSocket = () => (dispatch: any, getState: any) => {
     
     try {
       // Create WebSocket with error handling
-      let ws: WebSocket | null = null
-      
       try {
-        ws = new WebSocket(websocket.url)
+        wsInstance = new WebSocket(websocket.url)
       } catch (error) {
         console.error('Failed to create WebSocket connection:', error)
         dispatch(setStatus('error'))
@@ -124,10 +120,9 @@ export const initializeWebSocket = () => (dispatch: any, getState: any) => {
       }
       
       // Only set event handlers if WebSocket was created successfully
-      if (ws) {
-        ws.onopen = () => {
+      if (wsInstance) {
+        wsInstance.onopen = () => {
           console.log('WebSocket connected to:', websocket.url)
-          dispatch(setConnection(ws))
           dispatch(setStatus('connected'))
           dispatch(resetReconnectAttempts())
           dispatch(addMessage({
@@ -136,7 +131,7 @@ export const initializeWebSocket = () => (dispatch: any, getState: any) => {
           }))
         }
         
-        ws.onmessage = (event) => {
+        wsInstance.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data)
             dispatch(addMessage({
@@ -152,9 +147,9 @@ export const initializeWebSocket = () => (dispatch: any, getState: any) => {
           }
         }
         
-        ws.onclose = (event) => {
+        wsInstance.onclose = (event) => {
           console.log('WebSocket disconnected:', event.code, event.reason)
-          dispatch(setConnection(null))
+          wsInstance = null
           dispatch(setStatus('disconnected'))
           dispatch(addMessage({
             type: 'system',
@@ -172,7 +167,7 @@ export const initializeWebSocket = () => (dispatch: any, getState: any) => {
           }
         }
         
-        ws.onerror = (error) => {
+        wsInstance.onerror = (error) => {
           console.error('WebSocket error:', error)
           dispatch(setStatus('error'))
           dispatch(addMessage({
@@ -207,9 +202,9 @@ export const initializeWebSocket = () => (dispatch: any, getState: any) => {
 export const sendMessage = (message: any) => (dispatch: any, getState: any) => {
   const { websocket } = getState()
   
-  if (websocket.connection && websocket.status === 'connected') {
+  if (wsInstance && websocket.status === 'connected') {
     try {
-      websocket.connection.send(JSON.stringify(message))
+      wsInstance.send(JSON.stringify(message))
       dispatch(addMessage({
         type: 'sent',
         data: message
